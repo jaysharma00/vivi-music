@@ -195,7 +195,6 @@ import com.music.vivi.constants.ShowPlayerThumbnailShadowKey
 import com.music.vivi.constants.ThumbnailCornerRadius
 import com.music.vivi.constants.ThumbnailCornerRadiusKey
 import com.music.vivi.constants.UseNewPlayerDesignKey
-import com.music.vivi.constants.UsePlayerV2Key
 import com.music.vivi.constants.ShowAudioQualityBadgeKey
 import com.music.vivi.db.entities.FormatEntity
 import com.music.vivi.db.entities.LyricsEntity
@@ -1498,11 +1497,7 @@ fun BottomSheetPlayer(
             )
         },
     ) {
-        val usePlayerV2 by rememberPreference(UsePlayerV2Key, false)
-        if (usePlayerV2) {
-             PlayerV2(state, navController, modifier)
-        } else {
-            // True when we're showing the large tablet-landscape thumbnail above the controls
+        // True when we're showing the large tablet-landscape thumbnail above the controls
         // (see the ORIENTATION_LANDSCAPE branch below) - used to hide the redundant small
         // thumbnail that normally sits next to the title in the compact controls row.
         val isTabletLandscapeWithBigThumbnail = LocalConfiguration.current.let {
@@ -2954,7 +2949,6 @@ fun BottomSheetPlayer(
             },
             )
         }
-    }
     }
 }
 

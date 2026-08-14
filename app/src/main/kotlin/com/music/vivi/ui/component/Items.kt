@@ -1090,7 +1090,6 @@ fun MediaMetadataListItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     shape: Shape = RectangleShape,
-    backgroundColor: Color = Color.Unspecified,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     ListItem(
@@ -1128,8 +1127,7 @@ fun MediaMetadataListItem(
         trailingContent = trailingContent,
         modifier = modifier,
         isActive = isActive,
-        shape = shape,
-        backgroundColor = backgroundColor
+        shape = shape
     )
 }
 

@@ -732,15 +732,14 @@ fun SongMenu(
                             }
                         )
                     )
-                    val albumId = song.song.albumId?.takeIf { it.isNotBlank() } ?: song.album?.id?.takeIf { it.isNotBlank() }
-                    val albumName = song.song.albumName ?: song.album?.title
-                    
-                    if (!albumId.isNullOrBlank()) {
+                    if (song.song.albumId != null) {
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.view_album)) },
-                                description = albumName?.let { name ->
-                                    { Text(text = name) }
+                                description = {
+                                    song.song.albumName?.let {
+                                        Text(text = it)
+                                    }
                                 },
                                 icon = {
                                     Icon(
@@ -750,7 +749,7 @@ fun SongMenu(
                                 },
                                 onClick = {
                                     onDismiss()
-                                    navController.navigate("album/$albumId")
+                                    navController.navigate("album/${song.song.albumId}")
                                 }
                             )
                         )
