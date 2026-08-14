@@ -154,21 +154,13 @@ object YouTube {
 
         val shelfSummaries = contents.mapNotNull { it ->
             if (it.musicCardShelfRenderer != null) {
-                val isArtistCard = it.musicCardShelfRenderer.onTap?.browseEndpoint?.isArtistEndpoint == true
-                val implicitArtist = if (isArtistCard) {
-                    Artist(
-                        name = it.musicCardShelfRenderer.title?.runs?.firstOrNull()?.text ?: "",
-                        id = it.musicCardShelfRenderer.onTap?.browseEndpoint?.browseId
-                    )
-                } else null
-
                 SearchSummary(
                     title = it.musicCardShelfRenderer.header?.musicCardShelfHeaderBasicRenderer?.title?.runs?.firstOrNull()?.text ?: YouTubeConstants.DEFAULT_TOP_RESULT,
                     items = listOfNotNull(SearchSummaryPage.fromMusicCardShelfRenderer(it.musicCardShelfRenderer))
                         .plus(
                             it.musicCardShelfRenderer.contents
-                                ?.mapNotNull { content -> content.musicResponsiveListItemRenderer }
-                                ?.mapNotNull { renderer -> SearchSummaryPage.fromMusicResponsiveListItemRenderer(renderer, implicitArtist) }
+                                ?.mapNotNull { it.musicResponsiveListItemRenderer }
+                                ?.mapNotNull(SearchSummaryPage.Companion::fromMusicResponsiveListItemRenderer)
                                 .orEmpty()
                         )
                         .distinctBy { it.id }
@@ -1206,16 +1198,17 @@ object YouTube {
             )]
         }.joinToString("")
 
-        // Pass the videostatsPlaybackUrl as-is — it's a telemetry endpoint on s.youtube.com.
-        // Do NOT rewrite the host; doing so routes the request to the wrong server and causes
-        // silent history registration failures.
+        val playbackUrl = playbackTracking.replace(
+            "https://s.youtube.com",
+            "https://music.youtube.com",
+        )
+
         innerTube.registerPlayback(
-            url = playbackTracking,
+            url = playbackUrl,
             playlistId = playlistId,
             cpn = cpn
         )
     }
-
 
     suspend fun next(endpoint: WatchEndpoint, continuation: String? = null): Result<NextResult> = runCatching {
         val response = innerTube.next(

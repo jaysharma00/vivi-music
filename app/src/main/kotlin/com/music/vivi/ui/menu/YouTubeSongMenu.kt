@@ -588,20 +588,11 @@ fun YouTubeSongMenu(
                             )
                         )
                     }
-                    val albumId = song.album?.id?.takeIf { it.isNotBlank() }
-                        ?: librarySong?.song?.albumId?.takeIf { it.isNotBlank() }
-                        ?: librarySong?.album?.id?.takeIf { it.isNotBlank() }
-                    val albumName = song.album?.name
-                        ?: librarySong?.song?.albumName
-                        ?: librarySong?.album?.title
-
-                    if (!albumId.isNullOrBlank()) {
+                    song.album?.let { album ->
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.view_album)) },
-                                description = albumName?.let { name ->
-                                    { Text(text = name) }
-                                },
+                                description = { Text(text = album.name) },
                                 icon = {
                                     Icon(
                                         painter = painterResource(R.drawable.album),
@@ -609,7 +600,7 @@ fun YouTubeSongMenu(
                                     )
                                 },
                                 onClick = {
-                                    navController.navigate("album/$albumId")
+                                    navController.navigate("album/${album.id}")
                                     onDismiss()
                                 }
                             )

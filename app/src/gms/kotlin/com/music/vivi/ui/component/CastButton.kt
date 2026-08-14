@@ -48,8 +48,6 @@ import timber.log.Timber
 fun CastButton(
     modifier: Modifier = Modifier,
     tintColor: Color = MaterialTheme.colorScheme.onSurface,
-    activeTintColor: Color = MaterialTheme.colorScheme.primary,
-    showBackground: Boolean = true
 ) {
     val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current
@@ -135,21 +133,19 @@ fun CastButton(
             modifier = modifier
         ) {
             // Shadow background for cast button
-            if (showBackground) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .align(Alignment.Center)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.4f),
-                                    Color.Transparent
-                                )
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .align(Alignment.Center)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.4f),
+                                Color.Transparent
                             )
                         )
-                )
-            }
+                    )
+            )
             
             // Cast button
             Box(
@@ -197,9 +193,9 @@ fun CastButton(
                     ),
                     contentDescription = if (isCasting) "Stop casting" else "Cast",
                     colorFilter = ColorFilter.tint(
-                        if (isCasting) activeTintColor else tintColor
+                        if (isCasting) MaterialTheme.colorScheme.primary else tintColor
                     ),
-                    modifier = Modifier.size(if (showBackground) 24.dp else 28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
