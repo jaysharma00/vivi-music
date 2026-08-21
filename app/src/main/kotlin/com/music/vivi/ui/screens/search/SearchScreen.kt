@@ -473,8 +473,10 @@ fun SearchScreen(
             // and take focus before explicitly requesting the keyboard -
             // active=true alone doesn't reliably show it here, since this focus
             // change comes from this effect rather than directly from the tap
-            // that triggered it.
-            delay(100)
+            // that triggered it. The SearchBar's own expand animation takes
+            // ~300ms, so a shorter delay races ahead of the field gaining
+            // focus and the keyboard call ends up being a no-op.
+            delay(350)
             keyboardController?.show()
             backStackEntry?.savedStateHandle?.set("focusSearch", false)
         }
