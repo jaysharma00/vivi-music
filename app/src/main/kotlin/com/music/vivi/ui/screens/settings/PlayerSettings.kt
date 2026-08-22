@@ -55,6 +55,8 @@ import com.music.vivi.constants.AudioQualityKey
 import com.music.vivi.constants.EnableSaavnStreamingKey
 import com.music.vivi.constants.SaavnAudioQuality
 import com.music.vivi.constants.SaavnAudioQualityKey
+import com.music.vivi.constants.StreamingClient
+import com.music.vivi.constants.StreamingClientKey
 import com.music.vivi.constants.AutoDownloadOnLikeKey
 import com.music.vivi.constants.CrossfadeDurationKey
 import com.music.vivi.constants.CrossfadeEnabledKey
@@ -98,6 +100,10 @@ fun PlayerSettings(
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
         defaultValue = AudioQuality.AUTO
+    )
+    val (streamingClient, onStreamingClientChange) = rememberEnumPreference(
+        StreamingClientKey,
+        defaultValue = StreamingClient.ANDROID_VR_STABLE
     )
     val (crossfadeEnabled, onCrossfadeEnabledChange) = rememberPreference(
         CrossfadeEnabledKey,
@@ -293,6 +299,34 @@ fun PlayerSettings(
         )
     }
 
+    var showStreamingClientDialog by remember {
+        mutableStateOf(false)
+    }
+
+    fun streamingClientLabel(client: StreamingClient) = when (client) {
+        StreamingClient.ANDROID_VR_STABLE -> R.string.streaming_client_android_vr_stable
+        StreamingClient.ANDROID_VR_LATEST -> R.string.streaming_client_android_vr_latest
+        StreamingClient.ANDROID_VR_NO_AUTH -> R.string.streaming_client_android_vr_no_auth
+        StreamingClient.VISIONOS -> R.string.streaming_client_visionos
+        StreamingClient.IOS -> R.string.streaming_client_ios
+        StreamingClient.IPADOS -> R.string.streaming_client_ipados
+        StreamingClient.ANDROID_CREATOR -> R.string.streaming_client_android_creator
+    }
+
+    if (showStreamingClientDialog) {
+        EnumDialog(
+            onDismiss = { showStreamingClientDialog = false },
+            onSelect = {
+                onStreamingClientChange(it)
+                showStreamingClientDialog = false
+            },
+            title = stringResource(R.string.streaming_client),
+            current = streamingClient,
+            values = StreamingClient.values().toList(),
+            valueText = { stringResource(streamingClientLabel(it)) }
+        )
+    }
+
 
 
     Column(
@@ -351,6 +385,15 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { showAudioQualityDialog = true },
+                    isExpressive = true
+                ))
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.graphic_eq),
+                    title = { Text(stringResource(R.string.streaming_client)) },
+                    description = {
+                        Text(stringResource(streamingClientLabel(streamingClient)))
+                    },
+                    onClick = { showStreamingClientDialog = true },
                     isExpressive = true
                 ))
                 // JioSaavn settings navigation
