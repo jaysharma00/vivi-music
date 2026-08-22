@@ -242,6 +242,7 @@ fun ListItem(
     shape: Shape = RectangleShape,
     drawHighlight: Boolean = true,
     backgroundColor: Color = Color.Unspecified,
+    subtitleColor: Color = Color.Unspecified,
 ) = ListItem(
     title = title,
     subtitle = {
@@ -250,7 +251,7 @@ fun ListItem(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                color = if (subtitleColor != Color.Unspecified) subtitleColor else MaterialTheme.colorScheme.secondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -492,7 +493,7 @@ fun ExpressiveSongRow(
             .padding(horizontal = 16.dp)
             .clip(shape)
             .background(backgroundColor)
-            .padding(horizontal = 16.dp)
+            .padding(start = 12.dp, end = 4.dp)
     ) {
         // 1. Thumbnail, index number or visualizer on the left
         if (expressiveSongAlbumImage) {
@@ -582,14 +583,14 @@ fun ExpressiveSongRow(
             )
         }
 
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(12.dp))
 
         // 3. Total Time (duration)
         Text(
             text = makeTimeString(song.song.duration * 1000L),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.offset(x = 4.dp)
         )
 
         // 4. Trailing Content (more_vert or Checkbox)
@@ -1091,6 +1092,7 @@ fun MediaMetadataListItem(
     isPlaying: Boolean = false,
     shape: Shape = RectangleShape,
     backgroundColor: Color = Color.Unspecified,
+    subtitleColor: Color = Color.Unspecified,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     ListItem(
@@ -1129,7 +1131,8 @@ fun MediaMetadataListItem(
         modifier = modifier,
         isActive = isActive,
         shape = shape,
-        backgroundColor = backgroundColor
+        backgroundColor = backgroundColor,
+        subtitleColor = subtitleColor
     )
 }
 
