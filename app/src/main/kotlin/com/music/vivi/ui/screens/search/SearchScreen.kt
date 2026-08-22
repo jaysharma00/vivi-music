@@ -96,7 +96,13 @@ import com.music.vivi.viewmodels.ExploreViewModel
 import com.music.vivi.ui.screens.search.suggestions.SuggestionsTabContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import java.net.URLEncoder
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -130,6 +136,7 @@ fun SearchScreen(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val view = LocalView.current
     val isPlayerExpanded = LocalIsPlayerExpanded.current
     val playerConnection = LocalPlayerConnection.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -469,16 +476,26 @@ fun SearchScreen(
     LaunchedEffect(focusSearch?.value) {
         if (focusSearch?.value == true) {
             searchActive = true
-            // Give the expanded SearchBar's input a moment to actually compose
-            // and take focus before explicitly requesting the keyboard -
-            // active=true alone doesn't reliably show it here, since this focus
-            // change comes from this effect rather than directly from the tap
-            // that triggered it. The SearchBar's own expand animation takes
-            // ~300ms, so a shorter delay races ahead of the field gaining
-            // focus and the keyboard call ends up being a no-op.
-            delay(350)
-            keyboardController?.show()
             backStackEntry?.savedStateHandle?.set("focusSearch", false)
+
+            // The SearchBar auto-focuses its input field once expansion starts,
+            // but a single keyboardController.show() call fired right away
+            // races ahead of that focus actually landing and gets silently
+            // dropped. A fixed delay is just a guess at how long the expand
+            // animation takes. Instead, retry show() every frame - once the
+            // field is truly focused it succeeds immediately, and we confirm
+            // via the real IME window insets rather than a timer, so the
+            // keyboard appears the instant the expand animation is done with
+            // no extra, separately-felt pause afterwards.
+            withTimeoutOrNull(1_000) {
+                while (isActive) {
+                    keyboardController?.show()
+                    val imeVisible = ViewCompat.getRootWindowInsets(view)
+                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+                    if (imeVisible) break
+                    withFrameNanos {}
+                }
+            }
         }
     }
 }
