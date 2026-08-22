@@ -21,6 +21,7 @@ import com.music.innertube.models.YouTubeClient.Companion.IPADOS
 import com.music.innertube.models.YouTubeClient.Companion.MOBILE
 import com.music.innertube.models.YouTubeClient.Companion.TVHTML5
 import com.music.innertube.models.YouTubeClient.Companion.TVHTML5_SIMPLY_EMBEDDED_PLAYER
+import com.music.innertube.models.YouTubeClient.Companion.VISIONOS
 import com.music.innertube.models.YouTubeClient.Companion.WEB
 import com.music.innertube.models.YouTubeClient.Companion.WEB_CREATOR
 import com.music.innertube.models.YouTubeClient.Companion.WEB_REMIX
@@ -29,6 +30,8 @@ import com.music.vivi.constants.AudioQuality
 import com.music.vivi.constants.EnableSaavnStreamingKey
 import com.music.vivi.constants.SaavnAudioQuality
 import com.music.vivi.constants.SaavnAudioQualityKey
+import com.music.vivi.constants.StreamingClient
+import com.music.vivi.constants.StreamingClientKey
 import com.music.vivi.utils.YTPlayerUtils.MAIN_CLIENT
 import com.music.vivi.utils.YTPlayerUtils.STREAM_FALLBACK_CLIENTS
 import com.music.vivi.utils.YTPlayerUtils.validateStatus
@@ -94,8 +97,25 @@ object YTPlayerUtils {
      * Note: ANDROID_VR has loginSupported=false, so metadata like audioConfig and
      * playbackTracking must be supplemented from an authenticated client (WEB_REMIX)
      * when the user is logged in.
+     *
+     * Defaults to ANDROID_VR_1_43_32 but can be overridden by the user in
+     * Settings > Player > Streaming Client (see [StreamingClientKey]).
      */
     private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_1_43_32
+
+    private fun resolveMainClient(context: android.content.Context?): YouTubeClient {
+        if (context == null) return MAIN_CLIENT
+        val selected = context.dataStore.get(StreamingClientKey, StreamingClient.ANDROID_VR_STABLE.name)
+        return when (runCatching { StreamingClient.valueOf(selected) }.getOrDefault(StreamingClient.ANDROID_VR_STABLE)) {
+            StreamingClient.ANDROID_VR_STABLE -> ANDROID_VR_1_43_32
+            StreamingClient.ANDROID_VR_LATEST -> ANDROID_VR_1_61_48
+            StreamingClient.ANDROID_VR_NO_AUTH -> ANDROID_VR_NO_AUTH
+            StreamingClient.VISIONOS -> VISIONOS
+            StreamingClient.IOS -> IOS
+            StreamingClient.IPADOS -> IPADOS
+            StreamingClient.ANDROID_CREATOR -> ANDROID_CREATOR
+        }
+    }
 
     /**
      * Client used to fetch metadata (audioConfig, playbackTracking) when the user is
@@ -139,6 +159,12 @@ object YTPlayerUtils {
         connectivityManager: ConnectivityManager,
         context: android.content.Context? = null,
     ): Result<PlaybackData> {
+        // Resolves the user's preferred streaming client (Settings > Player >
+        // Streaming Client), falling back to the ANDROID_VR default. Shadows
+        // the companion-level MAIN_CLIENT so every reference below this line
+        // automatically picks up the preference without changing call sites.
+        val MAIN_CLIENT: YouTubeClient = resolveMainClient(context)
+
         // ── JioSaavn intercept ───────────────────────────────────────────────
         // If the user has enabled JioSaavn streaming, try to resolve the stream
         // URL from JioSaavn first. We fall through to YouTube on ANY failure so
