@@ -166,6 +166,7 @@ import com.music.vivi.models.PersistPlayerState
 import com.music.vivi.models.PersistQueue
 import com.music.vivi.models.toMediaMetadata
 import com.music.vivi.playback.audio.SilenceDetectorAudioProcessor
+import com.music.vivi.playback.audio.StereoPanAudioProcessor
 import com.music.vivi.playback.queues.EmptyQueue
 import com.music.vivi.playback.queues.Queue
 import com.music.vivi.playback.queues.YouTubeQueue
@@ -368,6 +369,7 @@ class MusicService :
     val playerFlow = _playerFlow.asStateFlow()
 
     private val playerSilenceProcessors = HashMap<Player, SilenceDetectorAudioProcessor>()
+    private val playerPanProcessors = HashMap<Player, StereoPanAudioProcessor>()
 
 
     private val instantSilenceSkipEnabled = MutableStateFlow(false)
@@ -1001,6 +1003,7 @@ class MusicService :
         equalizerService.addAudioProcessor(eqProcessor)
 
         val silenceProcessor = SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
+        val panProcessor = StereoPanAudioProcessor()
 
         // Set initial state
         runBlocking {
@@ -1011,7 +1014,7 @@ class MusicService :
 
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor))
+            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor, panProcessor))
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setAudioAttributes(
@@ -1027,6 +1030,7 @@ class MusicService :
             .build()
 
         playerSilenceProcessors[player] = silenceProcessor
+        playerPanProcessors[player] = panProcessor
 
         player.apply {
                 runBlocking {
@@ -3067,7 +3071,8 @@ class MusicService :
 
     private fun createRenderersFactory(
         eqProcessor: CustomEqualizerAudioProcessor,
-        silenceProcessor: SilenceDetectorAudioProcessor
+        silenceProcessor: SilenceDetectorAudioProcessor,
+        panProcessor: StereoPanAudioProcessor
     ) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
@@ -3084,6 +3089,7 @@ class MusicService :
                         arrayOf(
                             eqProcessor,
                             silenceProcessor,
+                            panProcessor,
                         ),
                         SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                         SonicAudioProcessor(),
@@ -3235,6 +3241,7 @@ class MusicService :
         player.removeListener(this)
         player.removeListener(sleepTimer)
         playerSilenceProcessors.remove(player)
+        playerPanProcessors.remove(player)
         // Note: equalizerService audio processors are cleared in equalizerService.release() if needed,
         // or we can't easily reference the specific processor created in createExoPlayer here without storing it.
         // But since we are destroying the service, it's fine.
@@ -3508,6 +3515,12 @@ class MusicService :
             val stepTime = duration / steps
             val startVolume = try { fadingPlayer?.volume ?: 1f } catch(e:Exception) { 1f }
 
+            // Incoming track pans in from the right and settles center; outgoing
+            // track pans out to the left as it fades, instead of a plain
+            // volume-only crossfade. See StereoPanAudioProcessor.
+            val incomingPan = playerPanProcessors[player]
+            val outgoingPan = fadingPlayer?.let { playerPanProcessors[it] }
+
             for (i in 0..steps) {
                 if (!isActive) break
                 // Pause volume ramp if player is paused
@@ -3522,6 +3535,8 @@ class MusicService :
                 try {
                     player.volume = startVolume * fadeIn
                     fadingPlayer?.volume = startVolume * fadeOut
+                    incomingPan?.pan = 1f - progress
+                    outgoingPan?.pan = -progress
                 } catch (e: Exception) { break }
 
                 delay(stepTime)
@@ -3530,6 +3545,7 @@ class MusicService :
             try {
                 fadingPlayer?.volume = 0f
                 player.volume = startVolume
+                incomingPan?.pan = 0f
                 cleanupCrossfade()
             } catch (e: Exception) { }
         }
