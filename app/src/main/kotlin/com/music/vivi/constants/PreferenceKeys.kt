@@ -535,6 +535,14 @@ val MainPlayerLyricsLineSpacingKey = floatPreferencesKey("mainPlayerLyricsLineSp
 val PlayerVolumeKey = floatPreferencesKey("playerVolume")
 val MusicHapticsEnabledKey = booleanPreferencesKey("musicHapticsEnabled")
 val MusicHapticsIntensityKey = floatPreferencesKey("musicHapticsIntensity")
+val MusicHapticsStyleKey = stringPreferencesKey("musicHapticsStyle")
+
+enum class HapticStyle {
+    SHARP,
+    SMOOTH,
+    DEEP,
+}
+
 val RepeatModeKey = intPreferencesKey("repeatMode")
 
 val SearchSourceKey = stringPreferencesKey("searchSource")

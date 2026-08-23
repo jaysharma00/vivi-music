@@ -204,6 +204,7 @@ import com.music.vivi.ui.theme.vivimusicTheme
 import com.music.vivi.ui.theme.extractThemeColor
 import com.music.vivi.ui.utils.appBarScrollBehavior
 import com.music.vivi.ui.utils.resetHeightOffset
+import com.music.vivi.utils.SearchFocusRequest
 import com.music.vivi.utils.SyncUtils
 import com.music.vivi.utils.dataStore
 import com.music.vivi.utils.get
@@ -1015,11 +1016,13 @@ class MainActivity : ComponentActivity() {
                                     // Every tap on Search - the first one that navigates there, or
                                     // any later one while it's already open - focuses the search bar
                                     // and opens the keyboard directly, instead of requiring a separate
-                                    // manual tap on the search bar itself. Set after the navigation/
-                                    // scroll logic above (not before) so currentBackStackEntry always
-                                    // reflects the final, current Search entry.
+                                    // manual tap on the search bar itself. This goes through a plain
+                                    // in-memory trigger rather than the back stack entry's
+                                    // savedStateHandle, since that flag wasn't reliably visible to
+                                    // SearchScreen with the popUpTo/restoreState navigation pattern
+                                    // used here (see SearchFocusRequest for details).
                                     if (screen == Screens.Search) {
-                                        navController.currentBackStackEntry?.savedStateHandle?.set("focusSearch", true)
+                                        SearchFocusRequest.trigger()
                                     }
                                 }
                             }

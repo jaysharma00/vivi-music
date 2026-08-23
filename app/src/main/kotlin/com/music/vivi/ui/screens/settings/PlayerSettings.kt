@@ -65,8 +65,10 @@ import com.music.vivi.constants.DisableLoadMoreWhenRepeatAllKey
 import com.music.vivi.constants.EnableGoogleCastKey
 import com.music.vivi.constants.HistoryDuration
 import com.music.vivi.constants.KeepScreenOn
+import com.music.vivi.constants.HapticStyle
 import com.music.vivi.constants.MusicHapticsEnabledKey
 import com.music.vivi.constants.MusicHapticsIntensityKey
+import com.music.vivi.constants.MusicHapticsStyleKey
 import com.music.vivi.constants.PauseOnMute
 import com.music.vivi.constants.PersistentQueueKey
 import com.music.vivi.constants.PersistentShuffleAcrossQueuesKey
@@ -114,6 +116,10 @@ fun PlayerSettings(
     val (musicHapticsIntensity, onMusicHapticsIntensityChange) = rememberPreference(
         MusicHapticsIntensityKey,
         defaultValue = 1f
+    )
+    val (musicHapticsStyle, onMusicHapticsStyleChange) = rememberEnumPreference(
+        MusicHapticsStyleKey,
+        defaultValue = HapticStyle.SHARP
     )
 
     // RECORD_AUDIO is a dangerous permission (API 23+) - declaring it in the
@@ -290,6 +296,30 @@ fun PlayerSettings(
                     AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
                 }
             }
+        )
+    }
+
+    var showHapticStyleDialog by remember {
+        mutableStateOf(false)
+    }
+
+    fun hapticStyleLabel(style: HapticStyle) = when (style) {
+        HapticStyle.SHARP -> R.string.music_haptics_style_sharp
+        HapticStyle.SMOOTH -> R.string.music_haptics_style_smooth
+        HapticStyle.DEEP -> R.string.music_haptics_style_deep
+    }
+
+    if (showHapticStyleDialog) {
+        EnumDialog(
+            onDismiss = { showHapticStyleDialog = false },
+            onSelect = {
+                onMusicHapticsStyleChange(it)
+                showHapticStyleDialog = false
+            },
+            title = stringResource(R.string.music_haptics_style),
+            current = musicHapticsStyle,
+            values = HapticStyle.values().toList(),
+            valueText = { stringResource(hapticStyleLabel(it)) }
         )
     }
 
@@ -486,6 +516,15 @@ fun PlayerSettings(
                         },
                         isExpressive = true,
                         descriptionBelow = true
+                    ))
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.graphic_eq),
+                        title = { Text(stringResource(R.string.music_haptics_style)) },
+                        description = {
+                            Text(stringResource(hapticStyleLabel(musicHapticsStyle)))
+                        },
+                        onClick = { showHapticStyleDialog = true },
+                        isExpressive = true
                     ))
                 }
                 add(Material3SettingsItem(
