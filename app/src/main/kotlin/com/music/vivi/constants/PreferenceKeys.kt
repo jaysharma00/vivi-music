@@ -126,6 +126,20 @@ enum class AudioQuality {
     LOW,
 }
 
+// Streaming client used to resolve the actual audio stream URL.
+// Corresponds to YouTubeClient.Companion entries in the innertube module.
+val StreamingClientKey = stringPreferencesKey("streamingClient")
+
+enum class StreamingClient {
+    ANDROID_VR_STABLE,   // ANDROID_VR_1_43_32 - default, non-adaptive bitrate, fixes stutter
+    ANDROID_VR_LATEST,   // ANDROID_VR_1_61_48
+    ANDROID_VR_NO_AUTH,
+    VISIONOS,
+    IOS,
+    IPADOS,
+    ANDROID_CREATOR,
+}
+
 val AudioOffload = booleanPreferencesKey("enableOffload")
 
 // JioSaavn streaming
@@ -535,6 +549,14 @@ val MainPlayerLyricsLineSpacingKey = floatPreferencesKey("mainPlayerLyricsLineSp
 val PlayerVolumeKey = floatPreferencesKey("playerVolume")
 val MusicHapticsEnabledKey = booleanPreferencesKey("musicHapticsEnabled")
 val MusicHapticsIntensityKey = floatPreferencesKey("musicHapticsIntensity")
+val MusicHapticsStyleKey = stringPreferencesKey("musicHapticsStyle")
+
+enum class HapticStyle {
+    SHARP,
+    SMOOTH,
+    DEEP,
+}
+
 val RepeatModeKey = intPreferencesKey("repeatMode")
 
 val SearchSourceKey = stringPreferencesKey("searchSource")
