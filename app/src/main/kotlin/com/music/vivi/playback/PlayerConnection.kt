@@ -24,10 +24,8 @@ import com.music.vivi.extensions.metadata
 import com.music.vivi.extensions.togglePlayPause
 import com.music.vivi.playback.MusicService.MusicBinder
 import com.music.vivi.playback.queues.Queue
-import com.music.vivi.constants.HapticStyle
 import com.music.vivi.constants.MusicHapticsEnabledKey
 import com.music.vivi.constants.MusicHapticsIntensityKey
-import com.music.vivi.constants.MusicHapticsStyleKey
 import com.music.vivi.utils.dataStore
 import com.music.vivi.utils.reportException
 import kotlinx.coroutines.CoroutineScope
@@ -146,7 +144,6 @@ class PlayerConnection(
     private data class HapticsState(
         val enabled: Boolean,
         val intensity: Float,
-        val style: HapticStyle,
         val playing: Boolean,
         val casting: Boolean
     )
@@ -159,25 +156,17 @@ class PlayerConnection(
             val hapticsIntensityFlow = context.dataStore.data
                 .map { it[MusicHapticsIntensityKey] ?: 1f }
                 .distinctUntilChanged()
-            val hapticsStyleFlow = context.dataStore.data
-                .map { prefs ->
-                    prefs[MusicHapticsStyleKey]?.let { runCatching { HapticStyle.valueOf(it) }.getOrNull() }
-                        ?: HapticStyle.SHARP
-                }
-                .distinctUntilChanged()
             val isCastingFlow = service.castConnectionHandler?.isCasting ?: MutableStateFlow(false)
 
             combine(
                 hapticsEnabledFlow,
                 hapticsIntensityFlow,
-                hapticsStyleFlow,
                 isPlaying,
                 isCastingFlow
-            ) { enabled, intensity, style, playing, casting ->
-                HapticsState(enabled, intensity, style, playing, casting)
+            ) { enabled, intensity, playing, casting ->
+                HapticsState(enabled, intensity, playing, casting)
             }.distinctUntilChanged().collect { state ->
                 musicHapticsManager.intensity = state.intensity
-                musicHapticsManager.style = state.style
                 if (state.enabled && state.playing && !state.casting) {
                     musicHapticsManager.start(player.audioSessionId)
                 } else {

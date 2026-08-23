@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import com.music.vivi.constants.HapticStyle
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -42,9 +41,6 @@ class MusicHapticsManager(context: Context) {
 
     /** 0f..1f, how strong each haptic pulse is. */
     var intensity: Float = 1f
-
-    /** Which vibration pattern each beat pulse plays. */
-    var style: HapticStyle = HapticStyle.SHARP
 
     private val vibrator: Vibrator? by lazy {
         try {
@@ -133,32 +129,16 @@ class MusicHapticsManager(context: Context) {
         val v = vibrator ?: return
         val amplitude = (255 * intensity).toInt().coerceIn(1, 255)
         try {
-            v.vibrate(effectFor(style, amplitude))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(VibrationEffect.createOneShot(PULSE_DURATION_MS, amplitude))
+            } else {
+                @Suppress("DEPRECATION")
+                v.vibrate(PULSE_DURATION_MS)
+            }
         } catch (e: Exception) {
             // Ignore - a missed haptic pulse should never affect playback.
         }
     }
-
-    /**
-     * Builds the vibration pattern for the current style:
-     * - SHARP: a single short, crisp tick - the original/default feel.
-     * - SMOOTH: a two-step amplitude ramp instead of an instant hit, so the
-     *   pulse feels like a gentle tap rather than a jolt.
-     * - DEEP: a single longer, stronger pulse for a punchier "thump" feel.
-     */
-    private fun effectFor(style: HapticStyle, amplitude: Int): VibrationEffect =
-        when (style) {
-            HapticStyle.SHARP -> VibrationEffect.createOneShot(SHARP_DURATION_MS, amplitude)
-            HapticStyle.SMOOTH -> VibrationEffect.createWaveform(
-                longArrayOf(SMOOTH_RAMP_MS, SMOOTH_DURATION_MS),
-                intArrayOf(
-                    (amplitude * 0.4f).toInt().coerceIn(1, 255),
-                    (amplitude * 0.9f).toInt().coerceIn(1, 255)
-                ),
-                -1
-            )
-            HapticStyle.DEEP -> VibrationEffect.createOneShot(DEEP_DURATION_MS, amplitude)
-        }
 
     fun stop() {
         visualizer?.let {
@@ -177,10 +157,6 @@ class MusicHapticsManager(context: Context) {
         private const val ABSOLUTE_FLOOR = 8f
         private const val PEAK_FRACTION = 0.6f
         private const val MIN_PULSE_INTERVAL_MS = 120L
-
-        private const val SHARP_DURATION_MS = 20L
-        private const val SMOOTH_RAMP_MS = 10L
-        private const val SMOOTH_DURATION_MS = 30L
-        private const val DEEP_DURATION_MS = 45L
+        private const val PULSE_DURATION_MS = 20L
     }
 }

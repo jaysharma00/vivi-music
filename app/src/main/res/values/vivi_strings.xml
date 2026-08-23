@@ -346,10 +346,6 @@
     <string name="music_haptics">Music Haptics</string>
     <string name="music_haptics_desc">Feel a beat-synced vibration in sync with the music as it plays</string>
     <string name="music_haptics_intensity">Haptics intensity</string>
-    <string name="music_haptics_style">Haptics style</string>
-    <string name="music_haptics_style_sharp">Sharp</string>
-    <string name="music_haptics_style_smooth">Smooth</string>
-    <string name="music_haptics_style_deep">Deep</string>
     <string name="crossfade_beta_title">Beta Feature</string>
     <string name="crossfade_beta_message">Crossfade is a new feature and may have bugs. If you experience any issues, please report them.\n\nThis feature disables audio offload due to technical limitations.</string>
 
