@@ -75,7 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
+import com.music.vivi.utils.SearchFocusRequest
 import com.music.innertube.models.WatchEndpoint
 import com.music.innertube.utils.YouTubeUrlParser
 import com.music.vivi.LocalDatabase
@@ -464,19 +464,19 @@ fun SearchScreen(
         }
     }
 
-    // Tapping the Search nav bar icon sets this flag (see MainActivity.kt's
-    // onNavItemClick) so it expands straight into the full search input with
-    // the keyboard open - the same state you'd reach by tapping the search bar
-    // itself - instead of landing on the collapsed Explore view.
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val focusSearch = backStackEntry?.savedStateHandle
-        ?.getStateFlow("focusSearch", false)
-        ?.collectAsState()
-
-    LaunchedEffect(focusSearch?.value) {
-        if (focusSearch?.value == true) {
+    // Tapping the Search nav bar icon triggers this (see MainActivity.kt's
+    // onNavItemClick / SearchFocusRequest) so it expands straight into the
+    // full search input with the keyboard open - the same state you'd reach
+    // by tapping the search bar itself - instead of landing on the
+    // collapsed Explore view. This used to be driven off a value stashed in
+    // the nav back stack entry's savedStateHandle, but that entry wasn't
+    // reliably the one this screen ends up observing under the
+    // popUpTo/restoreState navigation pattern used for the bottom bar, so
+    // the flag was silently missed on the very first tap. A plain in-memory
+    // counter sidesteps that entirely.
+    LaunchedEffect(SearchFocusRequest.requestId) {
+        if (SearchFocusRequest.requestId > 0) {
             searchActive = true
-            backStackEntry?.savedStateHandle?.set("focusSearch", false)
 
             // The SearchBar auto-focuses its input field once expansion starts,
             // but a single keyboardController.show() call fired right away
