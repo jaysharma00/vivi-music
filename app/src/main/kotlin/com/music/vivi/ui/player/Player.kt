@@ -2853,15 +2853,41 @@ fun BottomSheetPlayer(
                                                 Modifier
                                             }
                                         )
+                                        .clip(bigThumbnailShape)
+                                        .clickable(enabled = isFullScreen && enableLyricsThumbnailPlayPause) {
+                                            playerConnection.togglePlayPause()
+                                        }
                                 ) {
                                     AsyncImage(
                                         model = it.thumbnailUrl,
                                         contentDescription = null,
                                         contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(bigThumbnailShape)
+                                        modifier = Modifier.fillMaxSize()
                                     )
+
+                                    if (isFullScreen && enableLyricsThumbnailPlayPause) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = if (isPlaying) 0f else 0.4f))
+                                        )
+
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = !isPlaying,
+                                            enter = fadeIn(),
+                                            exit = fadeOut()
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(
+                                                    if (playbackState == Player.STATE_ENDED) R.drawable.replay
+                                                    else R.drawable.play
+                                                ),
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(48.dp)
+                                            )
+                                        }
+                                    }
                                 }
                                 Spacer(Modifier.height(24.dp))
                             }
