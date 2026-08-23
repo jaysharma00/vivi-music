@@ -55,6 +55,8 @@ import com.music.vivi.constants.AudioQualityKey
 import com.music.vivi.constants.EnableSaavnStreamingKey
 import com.music.vivi.constants.SaavnAudioQuality
 import com.music.vivi.constants.SaavnAudioQualityKey
+import com.music.vivi.constants.StreamingClient
+import com.music.vivi.constants.StreamingClientKey
 import com.music.vivi.constants.AutoDownloadOnLikeKey
 import com.music.vivi.constants.CrossfadeDurationKey
 import com.music.vivi.constants.CrossfadeEnabledKey
@@ -65,8 +67,10 @@ import com.music.vivi.constants.DisableLoadMoreWhenRepeatAllKey
 import com.music.vivi.constants.EnableGoogleCastKey
 import com.music.vivi.constants.HistoryDuration
 import com.music.vivi.constants.KeepScreenOn
+import com.music.vivi.constants.HapticStyle
 import com.music.vivi.constants.MusicHapticsEnabledKey
 import com.music.vivi.constants.MusicHapticsIntensityKey
+import com.music.vivi.constants.MusicHapticsStyleKey
 import com.music.vivi.constants.PauseOnMute
 import com.music.vivi.constants.PersistentQueueKey
 import com.music.vivi.constants.PersistentShuffleAcrossQueuesKey
@@ -99,6 +103,10 @@ fun PlayerSettings(
         AudioQualityKey,
         defaultValue = AudioQuality.AUTO
     )
+    val (streamingClient, onStreamingClientChange) = rememberEnumPreference(
+        StreamingClientKey,
+        defaultValue = StreamingClient.ANDROID_VR_STABLE
+    )
     val (crossfadeEnabled, onCrossfadeEnabledChange) = rememberPreference(
         CrossfadeEnabledKey,
         defaultValue = false
@@ -114,6 +122,10 @@ fun PlayerSettings(
     val (musicHapticsIntensity, onMusicHapticsIntensityChange) = rememberPreference(
         MusicHapticsIntensityKey,
         defaultValue = 1f
+    )
+    val (musicHapticsStyle, onMusicHapticsStyleChange) = rememberEnumPreference(
+        MusicHapticsStyleKey,
+        defaultValue = HapticStyle.SHARP
     )
 
     // RECORD_AUDIO is a dangerous permission (API 23+) - declaring it in the
@@ -293,6 +305,58 @@ fun PlayerSettings(
         )
     }
 
+    var showStreamingClientDialog by remember {
+        mutableStateOf(false)
+    }
+
+    fun streamingClientLabel(client: StreamingClient) = when (client) {
+        StreamingClient.ANDROID_VR_STABLE -> R.string.streaming_client_android_vr_stable
+        StreamingClient.ANDROID_VR_LATEST -> R.string.streaming_client_android_vr_latest
+        StreamingClient.ANDROID_VR_NO_AUTH -> R.string.streaming_client_android_vr_no_auth
+        StreamingClient.VISIONOS -> R.string.streaming_client_visionos
+        StreamingClient.IOS -> R.string.streaming_client_ios
+        StreamingClient.IPADOS -> R.string.streaming_client_ipados
+        StreamingClient.ANDROID_CREATOR -> R.string.streaming_client_android_creator
+    }
+
+    if (showStreamingClientDialog) {
+        EnumDialog(
+            onDismiss = { showStreamingClientDialog = false },
+            onSelect = {
+                onStreamingClientChange(it)
+                showStreamingClientDialog = false
+            },
+            title = stringResource(R.string.streaming_client),
+            current = streamingClient,
+            values = StreamingClient.values().toList(),
+            valueText = { stringResource(streamingClientLabel(it)) }
+        )
+    }
+
+    var showHapticStyleDialog by remember {
+        mutableStateOf(false)
+    }
+
+    fun hapticStyleLabel(style: HapticStyle) = when (style) {
+        HapticStyle.SHARP -> R.string.music_haptics_style_sharp
+        HapticStyle.SMOOTH -> R.string.music_haptics_style_smooth
+        HapticStyle.DEEP -> R.string.music_haptics_style_deep
+    }
+
+    if (showHapticStyleDialog) {
+        EnumDialog(
+            onDismiss = { showHapticStyleDialog = false },
+            onSelect = {
+                onMusicHapticsStyleChange(it)
+                showHapticStyleDialog = false
+            },
+            title = stringResource(R.string.music_haptics_style),
+            current = musicHapticsStyle,
+            values = HapticStyle.values().toList(),
+            valueText = { stringResource(hapticStyleLabel(it)) }
+        )
+    }
+
 
 
     Column(
@@ -351,6 +415,15 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { showAudioQualityDialog = true },
+                    isExpressive = true
+                ))
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.graphic_eq),
+                    title = { Text(stringResource(R.string.streaming_client)) },
+                    description = {
+                        Text(stringResource(streamingClientLabel(streamingClient)))
+                    },
+                    onClick = { showStreamingClientDialog = true },
                     isExpressive = true
                 ))
                 // JioSaavn settings navigation
@@ -486,6 +559,15 @@ fun PlayerSettings(
                         },
                         isExpressive = true,
                         descriptionBelow = true
+                    ))
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.graphic_eq),
+                        title = { Text(stringResource(R.string.music_haptics_style)) },
+                        description = {
+                            Text(stringResource(hapticStyleLabel(musicHapticsStyle)))
+                        },
+                        onClick = { showHapticStyleDialog = true },
+                        isExpressive = true
                     ))
                 }
                 add(Material3SettingsItem(
