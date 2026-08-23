@@ -59,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -478,17 +479,19 @@ fun SearchScreen(
         if (SearchFocusRequest.requestId > 0) {
             searchActive = true
 
-            // The SearchBar auto-focuses its input field once expansion starts,
-            // but a single keyboardController.show() call fired right away
-            // races ahead of that focus actually landing and gets silently
-            // dropped. A fixed delay is just a guess at how long the expand
-            // animation takes. Instead, retry show() every frame - once the
-            // field is truly focused it succeeds immediately, and we confirm
-            // via the real IME window insets rather than a timer, so the
-            // keyboard appears the instant the expand animation is done with
-            // no extra, separately-felt pause afterwards.
+            // Expanding the SearchBar via active=true from outside (rather than
+            // from the user directly tapping its own field) doesn't reliably
+            // focus its internal input - nothing ends up with real view focus,
+            // so keyboardController.show() alone has nothing to show a keyboard
+            // for. FocusDirection.Enter walks focus into the first focusable
+            // descendant of the current focus group, which is the now-visible
+            // query field, giving it actual focus before we ask for the
+            // keyboard. Retried every frame (rather than a single guess at
+            // timing) until either it works or a field was already focused by
+            // the SearchBar itself, confirmed via the real IME window insets.
             withTimeoutOrNull(1_000) {
                 while (isActive) {
+                    focusManager.moveFocus(FocusDirection.Enter)
                     keyboardController?.show()
                     val imeVisible = ViewCompat.getRootWindowInsets(view)
                         ?.isVisible(WindowInsetsCompat.Type.ime()) == true
