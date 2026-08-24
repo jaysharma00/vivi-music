@@ -3079,6 +3079,13 @@ fun InlineLyricsView(
  * and everything laid out below it - stays fixed rather than shifting as the
  * song nears its end.
  */
+// A single stable instance, not built fresh per slot/recomposition: LyricsEntry's
+// default-constructed StateFlow fields don't have value equality, so freshly
+// constructing this inline every time would make AnimatedContent below think
+// the placeholder "changed" on every recomposition and keep replaying its
+// transition instead of just sitting there invisibly.
+private val MINI_SYNCED_LYRICS_PLACEHOLDER = LyricsEntry(time = 0L, text = "")
+
 @Composable
 fun MiniSyncedLyrics(
     position: Long,
@@ -3150,39 +3157,30 @@ fun MiniSyncedLyrics(
     Column(modifier = modifier) {
         for (slot in 0 until lineCount) {
             val i = startIndex + slot
-            if (i < endIndex) {
-                val entry = lines[i]
+            // Each slot keeps a fixed vertical position (see the class doc for
+            // why this doesn't scroll), but the line occupying that slot still
+            // changes as the song progresses. Without this, that swap was an
+            // instant recomposition-time cut - AnimatedContent gives it the
+            // same kind of slide/fade transition the real scrolling Lyrics
+            // view gets for free from LazyColumn item animations.
+            val entry = if (i < endIndex) lines[i] else MINI_SYNCED_LYRICS_PLACEHOLDER
+            val isPlaceholder = i >= endIndex
+
+            AnimatedContent(
+                targetState = entry,
+                transitionSpec = {
+                    (slideInVertically(tween(220)) { height -> height } + fadeIn(tween(220))) togetherWith
+                        (slideOutVertically(tween(220)) { height -> -height } + fadeOut(tween(220)))
+                },
+                label = "MiniSyncedLyricsLine"
+            ) { animatedEntry ->
                 MetroLyricsLine(
-                    entry = entry,
-                    nextEntryTime = lines.getOrNull(i + 1)?.time,
+                    entry = animatedEntry,
+                    nextEntryTime = if (isPlaceholder) null else lines.getOrNull(i + 1)?.time,
                     effectivePlaybackPosition = position,
                     isSynced = true,
-                    isActive = i == currentLineIndex,
-                    distanceFromCurrent = kotlin.math.abs(i - currentLineIndex),
-                    lyricsTextPosition = lyricsTextPosition,
-                    textColor = textColor,
-                    showRomanized = false,
-                    showTranslated = false,
-                    onClick = {},
-                    onLongClick = {},
-                    isSelected = false,
-                    isSelectionModeActive = false,
-                    isAutoScrollActive = true,
-                    expressiveAccent = textColor,
-                    bgVisible = true,
-                    fontSizeOverride = lyricsTextSize,
-                    lineSpacingOverride = lyricsLineSpacing
-                )
-            } else {
-                // Placeholder: keeps the fixed lineCount-line height near the
-                // end of a song, so the volume bar/buttons below don't shift.
-                MetroLyricsLine(
-                    entry = LyricsEntry(time = 0L, text = ""),
-                    nextEntryTime = null,
-                    effectivePlaybackPosition = position,
-                    isSynced = true,
-                    isActive = false,
-                    distanceFromCurrent = slot,
+                    isActive = !isPlaceholder && i == currentLineIndex,
+                    distanceFromCurrent = if (isPlaceholder) slot else kotlin.math.abs(i - currentLineIndex),
                     lyricsTextPosition = lyricsTextPosition,
                     textColor = textColor,
                     showRomanized = false,
@@ -3196,7 +3194,7 @@ fun MiniSyncedLyrics(
                     bgVisible = true,
                     fontSizeOverride = lyricsTextSize,
                     lineSpacingOverride = lyricsLineSpacing,
-                    modifier = Modifier.alpha(0f)
+                    modifier = if (isPlaceholder) Modifier.alpha(0f) else Modifier
                 )
             }
         }
