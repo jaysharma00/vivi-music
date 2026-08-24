@@ -2854,7 +2854,7 @@ fun BottomSheetPlayer(
                                             }
                                         )
                                         .clip(bigThumbnailShape)
-                                        .clickable(enabled = isFullScreen && enableLyricsThumbnailPlayPause) {
+                                        .clickable(enabled = enableLyricsThumbnailPlayPause) {
                                             playerConnection.togglePlayPause()
                                         }
                                 ) {
@@ -2865,7 +2865,7 @@ fun BottomSheetPlayer(
                                         modifier = Modifier.fillMaxSize()
                                     )
 
-                                    if (isFullScreen && enableLyricsThumbnailPlayPause) {
+                                    if (enableLyricsThumbnailPlayPause) {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -3096,6 +3096,35 @@ fun MiniSyncedLyrics(
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsState(initial = null)
     val lyricsText = remember(currentLyrics) { currentLyrics?.lyrics?.trim() }
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val context = LocalContext.current
+    val database = LocalDatabase.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Auto-fetch on load instead of requiring the user to tap "Refetch" first -
+    // matches InlineLyricsView's behavior so this compact preview and the real
+    // lyrics view stay in sync about whether lyrics are known to be unfetched
+    // (currentLyrics == null) vs genuinely not found (LYRICS_NOT_FOUND).
+    LaunchedEffect(mediaMetadata?.id, currentLyrics) {
+        if (mediaMetadata != null && currentLyrics == null) {
+            delay(500)
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val entryPoint = EntryPointAccessors.fromApplication(
+                        context.applicationContext,
+                        com.music.vivi.di.LyricsHelperEntryPoint::class.java
+                    )
+                    val lyricsHelper = entryPoint.lyricsHelper()
+                    val fetchedLyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata!!)
+                    database.query {
+                        upsert(LyricsEntity(mediaMetadata!!.id, fetchedLyricsWithProvider.lyrics, fetchedLyricsWithProvider.provider))
+                    }
+                } catch (e: Exception) {
+                    // Handle error
+                }
+            }
+        }
+    }
 
     var lines by remember { mutableStateOf<List<LyricsEntry>>(emptyList()) }
     LaunchedEffect(lyricsText) {
@@ -3113,7 +3142,11 @@ fun MiniSyncedLyrics(
     }
 
     if (lines.isEmpty()) {
-        val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+        if (currentLyrics == null) {
+            // Still auto-fetching - a quiet placeholder rather than a "Refetch"
+            // button that implies fetching hasn't already been tried.
+            return
+        }
         val lyricsMenuViewModel: LyricsMenuViewModel = hiltViewModel()
         mediaMetadata?.let { metadata ->
             Row(
