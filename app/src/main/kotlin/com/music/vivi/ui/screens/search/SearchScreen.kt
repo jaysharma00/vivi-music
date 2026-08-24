@@ -330,6 +330,30 @@ fun SearchScreen(
                         .padding(top = searchBarTopPadding)
                 ) {
                     if (showSearchContent) {
+                        // This lambda is the SearchBar's expanded/content slot, which
+                        // Material3 composes inside its own internal Popup once active
+                        // becomes true - a separate focus root from the rest of the
+                        // screen. That's why grabbing focus from a LaunchedEffect up in
+                        // the outer SearchScreen composable never worked: moveFocus and
+                        // requestFocus can't cross into a Popup's isolated focus tree
+                        // from outside it. Running the same logic from here, inside the
+                        // Popup's own composition, gives it an actual path to the query
+                        // field. Retried every frame until it lands (or the field was
+                        // already focused by the SearchBar itself), confirmed via the
+                        // real IME window insets rather than a guessed delay.
+                        LaunchedEffect(Unit) {
+                            withTimeoutOrNull(1_000) {
+                                while (isActive) {
+                                    focusManager.moveFocus(FocusDirection.Enter)
+                                    keyboardController?.show()
+                                    val imeVisible = ViewCompat.getRootWindowInsets(view)
+                                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+                                    if (imeVisible) break
+                                    withFrameNanos {}
+                                }
+                            }
+                        }
+
                         when (searchSource) {
                             SearchSource.LOCAL -> LocalSearchScreen(
                                 query = query.text,
@@ -474,31 +498,12 @@ fun SearchScreen(
     // reliably the one this screen ends up observing under the
     // popUpTo/restoreState navigation pattern used for the bottom bar, so
     // the flag was silently missed on the very first tap. A plain in-memory
-    // counter sidesteps that entirely.
+    // counter sidesteps that entirely. The actual focus/keyboard grab lives
+    // in the SearchBar's own content lambda below - see the comment there
+    // for why it has to run from in there rather than from here.
     LaunchedEffect(SearchFocusRequest.requestId) {
         if (SearchFocusRequest.requestId > 0) {
             searchActive = true
-
-            // Expanding the SearchBar via active=true from outside (rather than
-            // from the user directly tapping its own field) doesn't reliably
-            // focus its internal input - nothing ends up with real view focus,
-            // so keyboardController.show() alone has nothing to show a keyboard
-            // for. FocusDirection.Enter walks focus into the first focusable
-            // descendant of the current focus group, which is the now-visible
-            // query field, giving it actual focus before we ask for the
-            // keyboard. Retried every frame (rather than a single guess at
-            // timing) until either it works or a field was already focused by
-            // the SearchBar itself, confirmed via the real IME window insets.
-            withTimeoutOrNull(1_000) {
-                while (isActive) {
-                    focusManager.moveFocus(FocusDirection.Enter)
-                    keyboardController?.show()
-                    val imeVisible = ViewCompat.getRootWindowInsets(view)
-                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-                    if (imeVisible) break
-                    withFrameNanos {}
-                }
-            }
         }
     }
 }
