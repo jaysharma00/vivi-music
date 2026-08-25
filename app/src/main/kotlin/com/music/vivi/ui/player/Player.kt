@@ -26,6 +26,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -2767,13 +2768,34 @@ fun BottomSheetPlayer(
             Configuration.ORIENTATION_LANDSCAPE -> {
                 // Calculate vertical padding like OuterTune
                 val density = LocalDensity.current
-                val verticalPadding = max(
+                val rawVerticalPadding = max(
                     WindowInsets.systemBars.getTop(density),
                     WindowInsets.systemBars.getBottom(density)
                 )
-                val verticalPaddingDp = with(density) { verticalPadding.toDp() }
+                // Animated rather than applied raw: this recomputes on every frame
+                // system bars are hiding/showing (isFullScreen toggling), and
+                // feeding that directly into layout caused the whole landscape
+                // split to visibly jump/step instead of transition smoothly.
+                val verticalPaddingDp by animateDpAsState(
+                    targetValue = with(density) { rawVerticalPadding.toDp() },
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    label = "TabletLyricsVerticalInsetPadding"
+                )
                 val verticalWindowInsets = WindowInsets(left = 0.dp, top = verticalPaddingDp, right = 0.dp, bottom = verticalPaddingDp)
-                
+
+                // Animated instead of a hard 0.65f/1f jump: Modifier.weight() is
+                // resolved by the parent Row on every measure pass, so an
+                // unanimated conditional here made the whole thumbnail/lyrics
+                // split resize in a single frame - the actual source of the
+                // "skipped animation" feeling on lyrics open/close, since
+                // animateContentSize() on the Column below could only smooth
+                // its own content, not bounds the Row had already jumped to.
+                val rightColumnWeight by animateFloatAsState(
+                    targetValue = if (showInlineLyrics) 0.65f else 1f,
+                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                    label = "TabletLyricsSplitWeight"
+                )
+
                 Row(
                     modifier = Modifier
                         .windowInsetsPadding(
@@ -2795,7 +2817,13 @@ fun BottomSheetPlayer(
                         AnimatedContent(
                             targetState = showInlineLyrics,
                             label = "Lyrics",
-                            transitionSpec = { fadeIn() togetherWith fadeOut() }
+                            // Matched to rightColumnWeight's timing above so the
+                            // content crossfade and the split-pane resize finish
+                            // together instead of visibly racing each other.
+                            transitionSpec = {
+                                fadeIn(tween(400, easing = FastOutSlowInEasing)) togetherWith
+                                    fadeOut(tween(400, easing = FastOutSlowInEasing))
+                            }
                         ) { showLyrics ->
                             if (showLyrics) {
                                 InlineLyricsView(
@@ -2818,8 +2846,7 @@ fun BottomSheetPlayer(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .weight(if (showInlineLyrics) 0.65f else 1f, false)
-                            .animateContentSize()
+                            .weight(rightColumnWeight, false)
                             .onGloballyPositioned { coordinates ->
                                 controlsLeftXPx = coordinates.positionInRoot().x
                             }
@@ -2837,11 +2864,33 @@ fun BottomSheetPlayer(
                             val bigThumbnailShadowElevation by rememberPreference(PlayerThumbnailShadowElevationKey, defaultValue = 8f)
                             val bigThumbnailShape = RoundedCornerShape(bigThumbnailCornerRadius.dp * 2)
 
+                            // Same bounce as the main player's Thumbnail (see
+                            // Thumbnail.kt's playPauseScale) - excluded for Apple
+                            // Music style there since it has its own dedicated
+                            // treatment, so excluded here too for consistency.
+                            val bigThumbnailPlayPauseScale by animateFloatAsState(
+                                targetValue = if (isPlaying || playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) {
+                                    1f
+                                } else {
+                                    0.92f
+                                },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "TabletBigThumbnailPlayPauseScale"
+                            )
+
                             mediaMetadata?.let {
                                 Box(
+                                    contentAlignment = Alignment.Center,
                                     modifier = Modifier
                                         .fillMaxWidth(0.7f)
                                         .aspectRatio(1f)
+                                        .graphicsLayer {
+                                            scaleX = bigThumbnailPlayPauseScale
+                                            scaleY = bigThumbnailPlayPauseScale
+                                        }
                                         .then(
                                             if (showBigThumbnailShadow) {
                                                 Modifier.customSoftShadow(
@@ -2854,7 +2903,7 @@ fun BottomSheetPlayer(
                                             }
                                         )
                                         .clip(bigThumbnailShape)
-                                        .clickable(enabled = enableLyricsThumbnailPlayPause) {
+                                        .clickable(enabled = isFullScreen && enableLyricsThumbnailPlayPause) {
                                             playerConnection.togglePlayPause()
                                         }
                                 ) {
@@ -2865,7 +2914,7 @@ fun BottomSheetPlayer(
                                         modifier = Modifier.fillMaxSize()
                                     )
 
-                                    if (enableLyricsThumbnailPlayPause) {
+                                    if (isFullScreen && enableLyricsThumbnailPlayPause) {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
