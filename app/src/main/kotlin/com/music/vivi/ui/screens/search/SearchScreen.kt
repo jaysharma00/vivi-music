@@ -59,7 +59,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -100,8 +99,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import android.view.MotionEvent
+import android.os.SystemClock
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.net.URLEncoder
@@ -137,7 +140,6 @@ fun SearchScreen(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val view = LocalView.current
     val isPlayerExpanded = LocalIsPlayerExpanded.current
     val playerConnection = LocalPlayerConnection.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -332,46 +334,82 @@ fun SearchScreen(
                     if (showSearchContent) {
                         // This lambda is the SearchBar's expanded/content slot, which
                         // Material3 composes inside its own internal Popup once active
-                        // becomes true - a separate focus root from the rest of the
-                        // screen. That's why grabbing focus from a LaunchedEffect up in
-                        // the outer SearchScreen composable never worked: moveFocus and
-                        // requestFocus can't cross into a Popup's isolated focus tree
-                        // from outside it. Running the same logic from here, inside the
-                        // Popup's own composition, gives it an actual path to the query
-                        // field. Retried every frame until it lands (or the field was
-                        // already focused by the SearchBar itself), confirmed via the
-                        // real IME window insets rather than a guessed delay.
+                        // becomes true - a separate focus root (and separate Android
+                        // View/window) from the rest of the screen. That's why grabbing
+                        // focus from a LaunchedEffect up in the outer SearchScreen
+                        // composable never worked, and why moveFocus/requestFocus alone
+                        // - even from here - still don't reliably bring up the keyboard:
+                        // Android's IME auto-show can specifically require the focus to
+                        // have come from a genuine touch event, not a programmatic one.
+                        //
+                        // So instead of asking for focus, we synthesize an actual tap -
+                        // exactly what a real second manual tap on the bar already does
+                        // reliably. The internal query field itself isn't something we
+                        // can get a position for directly, but it always sits immediately
+                        // above this content slot, in the same popup window, so we tap
+                        // just above this Box's own captured top edge instead of trying
+                        // to guess coordinates across windows.
+                        val popupView = LocalView.current
+                        val popupDensity = LocalDensity.current
+                        var contentTopYPx by remember { mutableStateOf<Float?>(null) }
+                        var contentCenterXPx by remember { mutableStateOf<Float?>(null) }
+
                         LaunchedEffect(Unit) {
-                            withTimeoutOrNull(1_000) {
-                                while (isActive) {
-                                    focusManager.moveFocus(FocusDirection.Enter)
+                            val inputFieldHeightPx = with(popupDensity) { 56.dp.toPx() }
+                            var attempt = 0
+                            withTimeoutOrNull(1_500) {
+                                while (isActive && attempt < 4) {
+                                    val topY = contentTopYPx
+                                    val centerX = contentCenterXPx
+                                    if (topY != null && centerX != null) {
+                                        val tapY = (topY - inputFieldHeightPx / 2).coerceAtLeast(0f)
+                                        val downTime = SystemClock.uptimeMillis()
+                                        val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, centerX, tapY, 0)
+                                        val up = MotionEvent.obtain(downTime, downTime + 50, MotionEvent.ACTION_UP, centerX, tapY, 0)
+                                        try {
+                                            popupView.dispatchTouchEvent(down)
+                                            popupView.dispatchTouchEvent(up)
+                                        } finally {
+                                            down.recycle()
+                                            up.recycle()
+                                        }
+                                        attempt++
+                                    }
                                     keyboardController?.show()
-                                    val imeVisible = ViewCompat.getRootWindowInsets(view)
+                                    val imeVisible = ViewCompat.getRootWindowInsets(popupView)
                                         ?.isVisible(WindowInsetsCompat.Type.ime()) == true
                                     if (imeVisible) break
-                                    withFrameNanos {}
+                                    delay(150)
                                 }
                             }
                         }
 
-                        when (searchSource) {
-                            SearchSource.LOCAL -> LocalSearchScreen(
-                                query = query.text,
-                                navController = navController,
-                                onDismiss = { searchActive = false },
-                                pureBlack = pureBlack
-                            )
-                            SearchSource.ONLINE -> OnlineSearchScreen(
-                                query = query.text,
-                                onQueryChange = { query = it },
-                                navController = navController,
-                                onSearch = {
-                                    onSearchFromSuggestion(it)
-                                    searchActive = false
-                                },
-                                onDismiss = { searchActive = false },
-                                pureBlack = pureBlack
-                            )
+                        Box(
+                            modifier = Modifier.onGloballyPositioned { coordinates ->
+                                val bounds = coordinates.boundsInWindow()
+                                contentTopYPx = bounds.top
+                                contentCenterXPx = bounds.left + bounds.width / 2f
+                            }
+                        ) {
+                            when (searchSource) {
+                                SearchSource.LOCAL -> LocalSearchScreen(
+                                    query = query.text,
+                                    navController = navController,
+                                    onDismiss = { searchActive = false },
+                                    pureBlack = pureBlack
+                                )
+                                SearchSource.ONLINE -> OnlineSearchScreen(
+                                    query = query.text,
+                                    onQueryChange = { query = it },
+                                    navController = navController,
+                                    onSearch = {
+                                        onSearchFromSuggestion(it)
+                                        searchActive = false
+                                    },
+                                    onDismiss = { searchActive = false },
+                                    pureBlack = pureBlack
+                                )
+                            }
                         }
                     }
                 }
