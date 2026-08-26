@@ -96,9 +96,7 @@ import com.music.vivi.viewmodels.ExploreViewModel
 import com.music.vivi.ui.screens.search.suggestions.SuggestionsTabContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.boundsInWindow
@@ -355,31 +353,47 @@ fun SearchScreen(
                         var contentCenterXPx by remember { mutableStateOf<Float?>(null) }
 
                         LaunchedEffect(Unit) {
-                            val inputFieldHeightPx = with(popupDensity) { 56.dp.toPx() }
-                            var attempt = 0
-                            withTimeoutOrNull(1_500) {
-                                while (isActive && attempt < 4) {
-                                    val topY = contentTopYPx
-                                    val centerX = contentCenterXPx
-                                    if (topY != null && centerX != null) {
-                                        val tapY = (topY - inputFieldHeightPx / 2).coerceAtLeast(0f)
-                                        val downTime = SystemClock.uptimeMillis()
-                                        val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, centerX, tapY, 0)
-                                        val up = MotionEvent.obtain(downTime, downTime + 50, MotionEvent.ACTION_UP, centerX, tapY, 0)
-                                        try {
-                                            popupView.dispatchTouchEvent(down)
-                                            popupView.dispatchTouchEvent(up)
-                                        } finally {
-                                            down.recycle()
-                                            up.recycle()
-                                        }
-                                        attempt++
-                                    }
-                                    keyboardController?.show()
-                                    val imeVisible = ViewCompat.getRootWindowInsets(popupView)
-                                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-                                    if (imeVisible) break
-                                    delay(150)
+                            fun isImeVisible() = ViewCompat.getRootWindowInsets(popupView)
+                                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+
+                            // Let the real tap that opened this screen finish being
+                            // processed, and the expand animation + content layout
+                            // fully settle, before touching anything ourselves.
+                            // Firing a synthetic tap too close to the real one that
+                            // triggered it - or onto a field that's already gained
+                            // focus - reads to Android as a rapid double-tap, which
+                            // opens the text-selection/copy-paste toolbar instead of
+                            // just showing the keyboard.
+                            delay(300)
+
+                            keyboardController?.show()
+                            if (isImeVisible()) return@LaunchedEffect
+
+                            // Give that a moment to actually take effect before
+                            // deciding it didn't work - IME visibility updates
+                            // aren't instant.
+                            delay(200)
+                            if (isImeVisible()) return@LaunchedEffect
+
+                            // Still not up - fall back to exactly one synthetic tap
+                            // on the (inferred) query field position. Deliberately
+                            // not retried: a second tap on a field that the first
+                            // one already focused is exactly what triggers the
+                            // selection toolbar instead of just the keyboard.
+                            val topY = contentTopYPx
+                            val centerX = contentCenterXPx
+                            if (topY != null && centerX != null) {
+                                val inputFieldHeightPx = with(popupDensity) { 56.dp.toPx() }
+                                val tapY = (topY - inputFieldHeightPx / 2).coerceAtLeast(0f)
+                                val downTime = SystemClock.uptimeMillis()
+                                val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, centerX, tapY, 0)
+                                val up = MotionEvent.obtain(downTime, downTime + 50, MotionEvent.ACTION_UP, centerX, tapY, 0)
+                                try {
+                                    popupView.dispatchTouchEvent(down)
+                                    popupView.dispatchTouchEvent(up)
+                                } finally {
+                                    down.recycle()
+                                    up.recycle()
                                 }
                             }
                         }
