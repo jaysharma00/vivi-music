@@ -47,6 +47,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -314,6 +315,13 @@ fun SearchScreen(
                         val popupDensity = LocalDensity.current
                         var contentTopYPx by remember { mutableStateOf<Float?>(null) }
                         var contentCenterXPx by remember { mutableStateOf<Float?>(null) }
+                        var contentRightXPx by remember { mutableStateOf<Float?>(null) }
+                        // Bumped whenever the query is replaced by picking a
+                        // suggestion/history entry (see onQueryChange below) rather
+                        // than by the user actually typing, so the cursor can be
+                        // moved to the end of the newly-filled text - see the
+                        // LaunchedEffect(cursorToEndTrigger) below for why.
+                        var cursorToEndTrigger by remember { mutableIntStateOf(0) }
 
                         LaunchedEffect(Unit) {
                             fun isImeVisible() = ViewCompat.getRootWindowInsets(popupView)
@@ -361,11 +369,46 @@ fun SearchScreen(
                             }
                         }
 
+                        // Material3's SearchBar only takes a plain query String, with
+                        // no way to pass a desired cursor/selection - it manages its
+                        // own internal cursor entirely privately. So even though
+                        // picking a suggestion/history entry correctly builds a
+                        // TextFieldValue with the selection at the end of the new
+                        // text, that selection is silently ignored by the actual
+                        // rendered field, which keeps whatever cursor position it
+                        // already had. The same synthetic-touch approach used above
+                        // for focus works here too: a tap near the right edge of the
+                        // (inferred) input row reliably lands the cursor at the end
+                        // of the text, exactly like a real tap there would.
+                        LaunchedEffect(cursorToEndTrigger) {
+                            if (cursorToEndTrigger == 0) return@LaunchedEffect
+                            delay(50)
+                            val topY = contentTopYPx
+                            val rightX = contentRightXPx
+                            if (topY != null && rightX != null) {
+                                val inputFieldHeightPx = with(popupDensity) { 56.dp.toPx() }
+                                val trailingIconInsetPx = with(popupDensity) { 64.dp.toPx() }
+                                val tapY = (topY - inputFieldHeightPx / 2).coerceAtLeast(0f)
+                                val tapX = (rightX - trailingIconInsetPx).coerceAtLeast(0f)
+                                val downTime = SystemClock.uptimeMillis()
+                                val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, tapX, tapY, 0)
+                                val up = MotionEvent.obtain(downTime, downTime + 50, MotionEvent.ACTION_UP, tapX, tapY, 0)
+                                try {
+                                    popupView.dispatchTouchEvent(down)
+                                    popupView.dispatchTouchEvent(up)
+                                } finally {
+                                    down.recycle()
+                                    up.recycle()
+                                }
+                            }
+                        }
+
                         Box(
                             modifier = Modifier.onGloballyPositioned { coordinates ->
                                 val bounds = coordinates.boundsInWindow()
                                 contentTopYPx = bounds.top
                                 contentCenterXPx = bounds.left + bounds.width / 2f
+                                contentRightXPx = bounds.right
                             }
                         ) {
                             when (searchSource) {
@@ -377,7 +420,10 @@ fun SearchScreen(
                                 )
                                 SearchSource.ONLINE -> OnlineSearchScreen(
                                     query = query.text,
-                                    onQueryChange = { query = it },
+                                    onQueryChange = {
+                                        query = it
+                                        cursorToEndTrigger++
+                                    },
                                     navController = navController,
                                     onSearch = {
                                         onSearchFromSuggestion(it)
