@@ -59,8 +59,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -68,10 +72,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import android.view.MotionEvent
+import android.os.SystemClock
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.music.vivi.utils.SearchFocusRequest
 import com.music.innertube.models.WatchEndpoint
 import com.music.innertube.utils.YouTubeUrlParser
 import com.music.vivi.LocalDatabase
@@ -87,18 +94,11 @@ import com.music.vivi.playback.queues.YouTubeQueue
 import com.music.vivi.ui.component.NavigationTitle
 import com.music.vivi.utils.rememberEnumPreference
 import com.music.vivi.utils.rememberPreference
+import com.music.vivi.utils.SearchFocusRequest
 import com.music.vivi.ui.screens.search.suggestions.SuggestionsTabContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import android.view.MotionEvent
-import android.os.SystemClock
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import java.net.URLEncoder
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.items
@@ -131,6 +131,35 @@ fun SearchScreen(
     var isFirstLaunch by rememberSaveable { mutableStateOf(true) }
     
     var searchActive by rememberSaveable { mutableStateOf(false) }
+    var showSearchContent by remember { mutableStateOf(false) }
+
+    LaunchedEffect(searchActive) {
+        if (searchActive) {
+            // Small delay to let the initial expansion animation run smoothly
+            // before composing the potentially heavy search results/history
+            delay(100)
+            showSearchContent = true
+        } else {
+            showSearchContent = false
+        }
+    }
+
+    // Tapping the Search nav bar icon triggers this (see MainActivity.kt's
+    // onNavItemClick / SearchFocusRequest) so it expands straight into the
+    // full search input with the keyboard open - the same state you'd reach
+    // by tapping the search bar itself - instead of landing on the
+    // collapsed state. Uses a plain in-memory counter (SearchFocusRequest)
+    // rather than a value stashed in the nav back stack entry's
+    // savedStateHandle, since that flag wasn't reliably visible to this
+    // screen under the popUpTo/restoreState navigation pattern used for the
+    // bottom bar. The actual focus/keyboard grab happens in the SearchBar's
+    // content lambda below - see the comment there for why it has to run
+    // from in there rather than from here.
+    LaunchedEffect(SearchFocusRequest.requestId) {
+        if (SearchFocusRequest.requestId > 0) {
+            searchActive = true
+        }
+    }
 
     val searchBarHorizontalPadding by animateDpAsState(
         targetValue = if (searchActive) 0.dp else 16.dp,
@@ -436,9 +465,6 @@ fun SearchScreen(
                         }
                     }
                 }
-
-
-            }
         },
         containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
     ) { paddingValues ->
@@ -449,10 +475,8 @@ fun SearchScreen(
                 .padding(top = paddingValues.calculateTopPadding())
                 .fillMaxSize()
         ) {
-            if (!searchActive) {
-                val tabPadding = PaddingValues(bottom = bottomPadding)
-                SuggestionsTabContent(navController = navController, contentPadding = tabPadding)
-            }
+            val tabPadding = PaddingValues(bottom = bottomPadding)
+            SuggestionsTabContent(navController = navController, contentPadding = tabPadding)
         }
     }
 
@@ -493,24 +517,6 @@ fun SearchScreen(
         
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    // Tapping the Search nav bar icon triggers this (see MainActivity.kt's
-    // onNavItemClick / SearchFocusRequest) so it expands straight into the
-    // full search input with the keyboard open - the same state you'd reach
-    // by tapping the search bar itself - instead of landing on the
-    // collapsed Explore view. This used to be driven off a value stashed in
-    // the nav back stack entry's savedStateHandle, but that entry wasn't
-    // reliably the one this screen ends up observing under the
-    // popUpTo/restoreState navigation pattern used for the bottom bar, so
-    // the flag was silently missed on the very first tap. A plain in-memory
-    // counter sidesteps that entirely. The actual focus/keyboard grab lives
-    // in the SearchBar's own content lambda below - see the comment there
-    // for why it has to run from in there rather than from here.
-    LaunchedEffect(SearchFocusRequest.requestId) {
-        if (SearchFocusRequest.requestId > 0) {
-            searchActive = true
         }
     }
 }
