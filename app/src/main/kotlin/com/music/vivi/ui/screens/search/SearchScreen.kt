@@ -416,7 +416,15 @@ fun SearchScreen(
                             val rightX = contentRightXPx
                             if (topY != null && rightX != null) {
                                 val inputFieldHeightPx = with(popupDensity) { 56.dp.toPx() }
-                                val trailingIconInsetPx = with(popupDensity) { 64.dp.toPx() }
+                                // Wide enough to clear BOTH trailing icons when a
+                                // suggestion has just been picked - the Clear (X)
+                                // button appears alongside the search-source toggle
+                                // once the field is non-empty, doubling the trailing
+                                // icon zone from ~48dp to ~96dp. A narrower inset here
+                                // landed the tap on the Clear button instead of past
+                                // it, wiping the query it was supposed to be fixing
+                                // the cursor position in.
+                                val trailingIconInsetPx = with(popupDensity) { 120.dp.toPx() }
                                 val tapY = (topY - inputFieldHeightPx / 2).coerceAtLeast(0f)
                                 val tapX = (rightX - trailingIconInsetPx).coerceAtLeast(0f)
                                 val downTime = SystemClock.uptimeMillis()
