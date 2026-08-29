@@ -211,7 +211,15 @@ data class SearchSummaryPage(
             }
         }
 
-        fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): YTItem? {
+        fun fromMusicResponsiveListItemRenderer(
+            renderer: MusicResponsiveListItemRenderer,
+            // Falls back to this when the item's own metadata doesn't list an
+            // artist - used for songs nested under an artist's "Top Result"
+            // card, which often don't repeat the artist name since it's
+            // already shown in the card header. Defaulted so every other
+            // call site of this function is unaffected.
+            implicitArtist: Artist? = null
+        ): YTItem? {
             val secondaryLine =
                 renderer.flexColumns
                     .getOrNull(1)
@@ -252,7 +260,7 @@ data class SearchSummaryPage(
                                 name = it.text,
                                 id = it.navigationEndpoint?.browseEndpoint?.browseId
                             )
-                        } ?: return null,
+                        } ?: implicitArtist?.let { listOf(it) } ?: return null,
                         album = listRun.getOrNull(1)?.firstOrNull()?.takeIf { it.navigationEndpoint?.browseEndpoint != null }?.let {
                             Album(
                                 name = it.text,
