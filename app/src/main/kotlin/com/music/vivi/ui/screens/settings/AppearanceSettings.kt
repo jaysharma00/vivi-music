@@ -1514,6 +1514,23 @@ fun AppearanceSettings(
                     },
                     onClick = { showPlayerDesignDialog = true }
                 ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.gradient),
+                    title = { Text(stringResource(R.string.player_background_style)) },
+                    trailingContent = {
+                        Text(
+                            when (playerBackground) {
+                                PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
+                                PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
+                                PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                                PlayerBackgroundStyle.GLOW_ANIMATED -> stringResource(R.string.glow_animated)
+                                PlayerBackgroundStyle.APPLE_MUSIC -> stringResource(R.string.apple_music)
+                                PlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.live_mesh)
+                            }
+                        )
+                    },
+                    onClick = { showPlayerBackgroundDialog = true }
+                ),
                 if (!useNewPlayerDesign && !usePlayerV2) {
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.tune),
@@ -1536,23 +1553,6 @@ fun AppearanceSettings(
                         onClick = { onShowAudioQualityBadgeChange(!showAudioQualityBadge) }
                     )
                 } else null,
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.gradient),
-                    title = { Text(stringResource(R.string.player_background_style)) },
-                    trailingContent = {
-                        Text(
-                            when (playerBackground) {
-                                PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
-                                PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
-                                PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
-                                PlayerBackgroundStyle.GLOW_ANIMATED -> stringResource(R.string.glow_animated)
-                                PlayerBackgroundStyle.APPLE_MUSIC -> stringResource(R.string.apple_music)
-                                PlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.live_mesh)
-                            }
-                        )
-                    },
-                    onClick = { showPlayerBackgroundDialog = true }
-                ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.hide_image),
                     title = { Text(stringResource(R.string.hide_player_thumbnail)) },
@@ -2000,7 +2000,7 @@ fun AppearanceSettings(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
                     title = { Text(stringResource(R.string.lyrics_animation_style)) },
-                    trailingContent = {
+                    description = {
                         Text(
                             when (lyricsAnimationStyle) {
                                 LyricsAnimationStyle.NONE -> stringResource(R.string.none)
