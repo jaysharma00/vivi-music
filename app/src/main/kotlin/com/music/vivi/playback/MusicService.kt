@@ -2876,7 +2876,8 @@ class MusicService :
                             ),
                         ),
                     ),
-            ).setFlags(FLAG_IGNORE_CACHE_ON_ERROR)
+            ).setCacheWriteDataSinkFactory(null)
+            .setFlags(FLAG_IGNORE_CACHE_ON_ERROR)
 
     // Flag to prevent queue saving during silence skip operations
     private var isSilenceSkipping = false
@@ -2984,7 +2985,7 @@ class MusicService :
                 }
 
                 if (downloadCache.isCached(mediaId, dataSpec.position, requiredLength) ||
-                    playerCache.isCached(mediaId, dataSpec.position, requiredLength)
+                    playerCache.isCached(mediaId, dataSpec.position, CHUNK_LENGTH)
                 ) {
                     scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
                     return@Factory dataSpec

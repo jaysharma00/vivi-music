@@ -25,8 +25,8 @@ android {
         applicationId = "com.kptech.vivimusic"
         minSdk = 26
         targetSdk = 37
-        versionCode = 74
-        versionName = "6.0.5"
+        versionCode = 75
+        versionName = "6.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -84,26 +84,29 @@ android {
         }
     }
 
-    signingConfigs {
-        create("persistentDebug") {
-            storeFile = file("persistent-debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-        create("release") {
-            storeFile = file("keystore/release.keystore")
+   signingConfigs {
+    create("persistentDebug") {
+        storeFile = file("persistent-debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+    }
+    create("release") {
+        val keystoreFile = file("keystore/release.keystore")
+        if (keystoreFile.exists()) {
+            storeFile = keystoreFile
             storePassword = System.getenv("STORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
         }
-        getByName("debug") {
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-            storePassword = "android"
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-        }
     }
+    getByName("debug") {
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+        storePassword = "android"
+        storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+    }
+}
 
     buildTypes {
         release {
