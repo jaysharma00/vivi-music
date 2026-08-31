@@ -108,25 +108,29 @@ android {
     }
 }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            isCrunchPngs = false
-            isDebuggable = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            buildConfigField("String", "ARCHITECTURE", "\"release\"")
-        }
-        debug {
-            applicationIdSuffix = ".debug"
-            isDebuggable = true
-            signingConfig = signingConfigs.getByName("debug")
-            buildConfigField("String", "ARCHITECTURE", "\"debug\"")
-        }
+buildTypes {
+    release {
+        signingConfig = if (file("keystore/release.keystore").exists())
+            signingConfigs.getByName("release")
+        else
+            signingConfigs.getByName("debug")
+        isMinifyEnabled = true
+        isShrinkResources = true
+        isCrunchPngs = false
+        isDebuggable = false
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+        buildConfigField("String", "ARCHITECTURE", "\"release\"")
     }
+    debug {
+        applicationIdSuffix = ".debug"
+        isDebuggable = true
+        signingConfig = signingConfigs.getByName("debug")
+        buildConfigField("String", "ARCHITECTURE", "\"debug\"")
+    }
+}
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
