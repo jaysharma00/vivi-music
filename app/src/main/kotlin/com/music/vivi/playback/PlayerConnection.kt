@@ -24,6 +24,8 @@ import com.music.vivi.extensions.metadata
 import com.music.vivi.extensions.togglePlayPause
 import com.music.vivi.playback.MusicService.MusicBinder
 import com.music.vivi.playback.queues.Queue
+import com.music.vivi.playback.queues.YouTubeQueue
+import com.music.innertube.pages.RadioChip
 import com.music.vivi.constants.HapticStyle
 import com.music.vivi.constants.MusicHapticsEnabledKey
 import com.music.vivi.constants.MusicHapticsIntensityKey
@@ -200,6 +202,7 @@ class PlayerConnection(
             database.format(mediaMetadata?.id)
         }
 
+    val radioChips = service.radioChips
     val queueTitle = MutableStateFlow<String?>(null)
     val queueWindows = MutableStateFlow<List<Timeline.Window>>(emptyList())
     val currentMediaItemIndex = MutableStateFlow(-1)
@@ -286,6 +289,10 @@ class PlayerConnection(
             Timber.tag(TAG).e(e, "Error in playQueue")
             throw e
         }
+    }
+
+    fun selectRadioChip(chip: RadioChip) {
+        service.applyRadioChip(chip)
     }
 
     fun startRadioSeamlessly() {
@@ -535,6 +542,10 @@ class PlayerConnection(
         currentMediaItemIndex.value = player.currentMediaItemIndex
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()
+        // Auto-refresh radio filter chips for every newly active song
+        if (mediaItem != null) {
+            service.refreshChipsForCurrentSong()
+        }
     }
 
     override fun onTimelineChanged(

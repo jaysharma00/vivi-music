@@ -146,7 +146,7 @@ fun PlayerV2(
         if (playerState == PlayerInternalState.LYRICS) {
             delay(3000)
             controlsVisible = false
-        } else {
+        } else if (playerState == PlayerInternalState.COVER) {
             controlsVisible = true
         }
     }
@@ -323,7 +323,9 @@ fun PlayerV2(
                         val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                         if (event.changes.any { it.pressed }) {
                             lastInteractionTime = System.currentTimeMillis()
-                            controlsVisible = true
+                            if (playerState != PlayerInternalState.QUEUE) {
+                                controlsVisible = true
+                            }
                         }
                     }
                 }
@@ -359,19 +361,9 @@ fun PlayerV2(
                     AnimatedContent(
                         targetState = playerState,
                         transitionSpec = {
-                            if (targetState == PlayerInternalState.LYRICS || targetState == PlayerInternalState.QUEUE) {
-                                // Pure crossfade: lets Shared Elements smoothly morph top-left while lyrics fade in calmly
-                                fadeIn(animationSpec = tween(600, easing = FastOutSlowInEasing)) togetherWith 
-                                fadeOut(animationSpec = tween(600, easing = FastOutSlowInEasing))
-                            } else {
-                                fadeIn(animationSpec = tween(600, easing = FastOutSlowInEasing)) togetherWith 
-                                fadeOut(animationSpec = tween(600, easing = FastOutSlowInEasing))
-                            }.using(
-                                // Ensure the Lyrics pane is drawn OVER the Cover pane during transition
-                                androidx.compose.animation.SizeTransform(clip = false)
-                            ).apply {
-                                targetContentZIndex = if (targetState == PlayerInternalState.LYRICS || targetState == PlayerInternalState.QUEUE) 1f else 0f
-                            }
+                            (fadeIn(animationSpec = tween(500, easing = FastOutSlowInEasing)) togetherWith
+                             fadeOut(animationSpec = tween(500, easing = FastOutSlowInEasing)))
+                                .apply { targetContentZIndex = 1f }
                         },
                         modifier = Modifier.fillMaxSize(),
                         label = "InternalWindow"
@@ -389,7 +381,10 @@ fun PlayerV2(
                                     modifier = Modifier
                                         .sharedElement(
                                             rememberSharedContentState(key = "coverArt"),
-                                            animatedVisibilityScope = this@AnimatedContent
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = BoundsTransform { _, _ ->
+                                                tween(durationMillis = 500, easing = FastOutSlowInEasing)
+                                            }
                                         )
                                         .fillMaxWidth()
                                         .aspectRatio(1f)
@@ -449,10 +444,13 @@ fun PlayerV2(
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.sharedBounds(
-                                                rememberSharedContentState(key = "title"),
-                                                animatedVisibilityScope = this@AnimatedContent
-                                            ).clickable {
+                                        modifier = Modifier.sharedBounds(
+                                            rememberSharedContentState(key = "title"),
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = BoundsTransform { _, _ ->
+                                                tween(durationMillis = 500, easing = FastOutSlowInEasing)
+                                            }
+                                        ).clickable {
                                                 state.collapseSoft()
                                                 mediaMetadata?.album?.id?.let { navController.navigate("album/$it") }
                                             }
@@ -465,10 +463,13 @@ fun PlayerV2(
                                             fontWeight = FontWeight.Medium,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.sharedBounds(
-                                                rememberSharedContentState(key = "artist"),
-                                                animatedVisibilityScope = this@AnimatedContent
-                                            ).clickable {
+                                        modifier = Modifier.sharedBounds(
+                                            rememberSharedContentState(key = "artist"),
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = BoundsTransform { _, _ ->
+                                                tween(durationMillis = 500, easing = FastOutSlowInEasing)
+                                            }
+                                        ).clickable {
                                                 state.collapseSoft()
                                                 mediaMetadata?.artists?.firstOrNull()?.id?.let { navController.navigate("artist/$it") }
                                             }
@@ -479,7 +480,10 @@ fun PlayerV2(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.sharedBounds(
                                             rememberSharedContentState(key = "actionButtons"),
-                                            animatedVisibilityScope = this@AnimatedContent
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = BoundsTransform { _, _ ->
+                                                tween(durationMillis = 500, easing = FastOutSlowInEasing)
+                                            }
                                         )
                                     ) {
                                         val isLiked = currentSong?.song?.liked == true
@@ -552,7 +556,11 @@ fun PlayerV2(
                                         modifier = Modifier
                                             .sharedElement(
                                                 rememberSharedContentState(key = "coverArt"),
-                                                animatedVisibilityScope = this@AnimatedContent
+                                                animatedVisibilityScope = this@AnimatedContent,
+                                                zIndexInOverlay = 1f,
+                                                boundsTransform = BoundsTransform { _, _ ->
+                                                    tween(durationMillis = 500, easing = FastOutSlowInEasing)
+                                                }
                                             )
                                             .size(64.dp)
                                             .customSoftShadow(
@@ -601,7 +609,9 @@ fun PlayerV2(
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.sharedBounds(
                                                 rememberSharedContentState(key = "title"),
-                                                animatedVisibilityScope = this@AnimatedContent
+                                                animatedVisibilityScope = this@AnimatedContent,
+                                                enter = fadeIn(tween(400)),
+                                                exit = fadeOut(tween(300))
                                             )
                                         )
                                         Text(
@@ -612,7 +622,9 @@ fun PlayerV2(
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.sharedBounds(
                                                 rememberSharedContentState(key = "artist"),
-                                                animatedVisibilityScope = this@AnimatedContent
+                                                animatedVisibilityScope = this@AnimatedContent,
+                                                enter = fadeIn(tween(400)),
+                                                exit = fadeOut(tween(300))
                                             )
                                         )
                                     }
@@ -621,7 +633,9 @@ fun PlayerV2(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.sharedBounds(
                                             rememberSharedContentState(key = "actionButtons"),
-                                            animatedVisibilityScope = this@AnimatedContent
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            enter = fadeIn(tween(400)),
+                                            exit = fadeOut(tween(300))
                                         )
                                     ) {
                                         val isLiked = currentSong?.song?.liked == true
@@ -689,8 +703,8 @@ fun PlayerV2(
                                     modifier = Modifier
                                         .weight(1f)
                                         .animateEnterExit(
-                                            enter = slideInVertically(animationSpec = tween(600, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(600)),
-                                            exit = fadeOut(animationSpec = tween(400)) + slideOutVertically(animationSpec = tween(400, easing = FastOutSlowInEasing)) { it }
+                                            enter = slideInVertically(animationSpec = tween(450, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(350)),
+                                            exit = fadeOut(animationSpec = tween(250))
                                         )
                                 ) {
                                     if (targetState == PlayerInternalState.LYRICS) {
@@ -703,7 +717,10 @@ fun PlayerV2(
                                         QueueV2(
                                             navController = navController,
                                             playerBottomSheetState = state,
-                                            modifier = Modifier.fillMaxSize()
+                                            modifier = Modifier.fillMaxSize(),
+                                            onControlsVisibilityChange = { isVisible ->
+                                                controlsVisible = isVisible
+                                            }
                                         )
                                     }
                                 }
@@ -715,12 +732,10 @@ fun PlayerV2(
             // Persistent Controls Array (Always at the bottom)
             AnimatedVisibility(
                     visible = controlsVisible,
-                    enter = fadeIn(animationSpec = tween(500, easing = LinearOutSlowInEasing)) +
-                            slideInVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing)) { it / 2 } +
-                            androidx.compose.animation.expandVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing)),
-                    exit = fadeOut(animationSpec = tween(500, easing = LinearOutSlowInEasing)) +
-                           slideOutVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing)) { it / 2 } +
-                           androidx.compose.animation.shrinkVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing))
+                    enter = fadeIn(animationSpec = tween(400, easing = FastOutSlowInEasing)) +
+                            expandVertically(animationSpec = tween(400, easing = FastOutSlowInEasing), expandFrom = Alignment.Bottom),
+                    exit = fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                           shrinkVertically(animationSpec = tween(380, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Bottom)
                 ) {
                     Column(
                         modifier = Modifier
@@ -742,7 +757,7 @@ fun PlayerV2(
                     
                     val trackHeight by animateDpAsState(
                         targetValue = if (isTrackActive) 12.dp else 6.dp,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
                         label = "trackScale"
                     )
                     
