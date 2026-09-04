@@ -26,8 +26,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = 75
-        val betaVersionName = project.findProperty("betaVersionName") as String?
-        versionName = betaVersionName ?: "6.0.6"
+        versionName = "6.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -42,17 +41,11 @@ android {
         buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
 
-        // GitHub OAuth API Keys
-        val githubClientId = localProperties.getProperty("GITHUB_CLIENT_ID") ?: System.getenv("VIVI_GITHUB_CLIENT_ID") ?: ""
-        val githubClientSecret = localProperties.getProperty("GITHUB_CLIENT_SECRET") ?: System.getenv("VIVI_GITHUB_CLIENT_SECRET") ?: ""
-
-        buildConfigField("String", "GITHUB_CLIENT_ID", "\"$githubClientId\"")
-        buildConfigField("String", "GITHUB_CLIENT_SECRET", "\"$githubClientSecret\"")
-
 //add nightly build label support
         val isNightly = project.hasProperty("nightly") && project.property("nightly") == "true"
         buildConfigField("Boolean", "IS_NIGHTLY", isNightly.toString())
     }
+    
 
     flavorDimensions += listOf("abi", "variant")
     productFlavors {
@@ -296,8 +289,6 @@ dependencies {
     implementation(project(":jiosaavn"))
     implementation(project(":spotify"))
     implementation(project(":lyricsProvider"))
-
-    implementation(libs.innertubex)
 
 
 

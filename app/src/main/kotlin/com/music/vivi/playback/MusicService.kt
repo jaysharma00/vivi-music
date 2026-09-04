@@ -76,6 +76,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
+import com.music.innertube.strategy.ContentHints
 import com.music.innertube.pages.RadioChip
 import com.music.lastfm.LastFM
 import com.music.vivi.MainActivity
@@ -186,7 +187,6 @@ import com.music.vivi.playback.queues.filterExplicit
 import com.music.vivi.playback.queues.filterVideoSongs
 import com.music.vivi.utils.CoilBitmapLoader
 import com.music.vivi.utils.DiscordRPC
-import com.music.vivi.utils.InnerTubeXPlayer
 import com.music.vivi.utils.NetworkConnectivityObserver
 import com.music.vivi.utils.ScrobbleManager
 import com.music.vivi.utils.SyncUtils
@@ -1368,7 +1368,7 @@ class MusicService :
 
     private suspend fun recoverSong(
         mediaId: String,
-        playbackData: InnerTubeXPlayer.PlaybackData? = null
+        playbackData: YTPlayerUtils.PlaybackData? = null
     ) {
         val song = database.song(mediaId).first()
         val mediaMetadata = withContext(Dispatchers.Main) {
@@ -2702,7 +2702,13 @@ class MusicService :
             Timber.tag(TAG).e(e, "Failed to clear player cache for $mediaId")
         }
 
-
+        // Clear decryption caches
+        try {
+            YTPlayerUtils.forceRefreshForVideo(mediaId)
+            Timber.tag(TAG).d("Cleared decryption caches for $mediaId")
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Failed to clear decryption caches for $mediaId")
+        }
     }
 
     /**
@@ -2903,7 +2909,12 @@ class MusicService :
         songUrlCache.invalidate(mediaId)
         Timber.tag(TAG).d("Cleared cached URL for $mediaId")
 
-
+        // Clear decryption caches
+        try {
+            YTPlayerUtils.forceRefreshForVideo(mediaId)
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Failed to clear decryption caches")
+        }
 
         retryJob?.cancel()
         retryJob = scope.launch {

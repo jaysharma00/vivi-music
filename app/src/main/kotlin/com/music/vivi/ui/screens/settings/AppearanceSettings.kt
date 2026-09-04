@@ -69,6 +69,7 @@ import com.music.vivi.constants.DensityScale
 import com.music.vivi.constants.DensityScaleKey
 import com.music.vivi.constants.DynamicThemeKey
 import com.music.vivi.constants.EnableDynamicIconKey
+import com.music.vivi.constants.EnableSettingsPopupKey
 import com.music.vivi.constants.EnableHighRefreshRateKey
 import com.music.vivi.constants.EnableLyricsThumbnailPlayPauseKey
 import com.music.vivi.constants.GridItemSize
@@ -146,7 +147,6 @@ import com.music.vivi.constants.LyricsScrollKey
 import com.music.vivi.constants.MiniPlayerBackgroundStyleKey
 import com.music.vivi.constants.ShowAudioQualityBadgeKey
 import com.music.vivi.constants.ShowCommentButtonKey
-import com.music.vivi.constants.EnableSettingsPopupKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,16 +168,16 @@ fun AppearanceSettings(
         EnableDynamicIconKey,
         defaultValue = true
     )
-    val (enableSettingsPopup, onEnableSettingsPopupChange) = rememberPreference(
-        EnableSettingsPopupKey,
-        defaultValue = true
-    )
     val (enableHighRefreshRate, onEnableHighRefreshRateChange) = rememberPreference(
         EnableHighRefreshRateKey,
         defaultValue = true
     )
     val (showAudioQualityBadge, onShowAudioQualityBadgeChange) = rememberPreference(
         ShowAudioQualityBadgeKey,
+        defaultValue = false
+    )
+    val (enableSettingsPopup, onEnableSettingsPopupChange) = rememberPreference(
+        EnableSettingsPopupKey,
         defaultValue = false
     )
     val (selectedThemeColorInt) = rememberPreference(
@@ -472,9 +472,6 @@ fun AppearanceSettings(
                     PlayerDesignOption.V2 -> {
                         onUsePlayerV2Change(true)
                         onUseNewPlayerDesignChange(false)
-                        if (playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) {
-                            onPlayerBackgroundChange(PlayerBackgroundStyle.DEFAULT)
-                        }
                     }
                 }
                 showPlayerDesignDialog = false
@@ -1368,12 +1365,11 @@ fun AppearanceSettings(
                         onClick = { onEnableHighRefreshRateChange(!enableHighRefreshRate) }
                     )
                 )
-
                 add(
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.settings), // Or tuning/setting generic icon
-                        title = { Text("Enable Settings Dropdown") },
-                        description = { Text("Show a Material 3 dropdown menu when clicking the settings icon on the home screen") },
+                        icon = painterResource(R.drawable.settings),
+                        title = { Text(stringResource(R.string.enable_settings_popup)) },
+                        description = { Text(stringResource(R.string.enable_settings_popup_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = enableSettingsPopup,
@@ -1392,7 +1388,6 @@ fun AppearanceSettings(
                         onClick = { onEnableSettingsPopupChange(!enableSettingsPopup) }
                     )
                 )
-
                 // Only show dynamic theme option when using the default/dynamic color
                 // When a custom color is selected, dynamic theme is automatically disabled
                 if (!isUsingCustomColor) {
