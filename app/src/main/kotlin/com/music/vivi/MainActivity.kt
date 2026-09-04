@@ -194,7 +194,7 @@ import com.music.vivi.ui.component.shimmer.ShimmerTheme
 import com.music.vivi.ui.menu.YouTubeSongMenu
 import com.music.vivi.ui.player.BottomSheetPlayer
 import com.music.vivi.ui.screens.Screens
-import com.music.vivi.ui.screens.SettingDialoge
+import com.music.vivi.ui.screens.SettingsDropdownMenu
 import com.music.vivi.ui.screens.navigationBuilder
 import com.music.vivi.ui.screens.settings.DarkMode
 import com.music.vivi.ui.screens.settings.NavigationTab
@@ -228,7 +228,9 @@ import timber.log.Timber
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
+import com.music.vivi.github.GitHubViewModel
 import javax.inject.Inject
+import androidx.activity.viewModels
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -249,6 +251,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var listenTogetherManager: com.music.vivi.listentogether.ListenTogetherManager
+
+    private val gitHubViewModel: GitHubViewModel by viewModels()
 
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
@@ -825,8 +829,6 @@ class MainActivity : ComponentActivity() {
                 var sharedSong: SongItem? by remember {
                     mutableStateOf(null)
                 }
-                var showSettingDialoge by remember { mutableStateOf(false) }
-                val (enableSettingsPopup) = rememberPreference(EnableSettingsPopupKey, defaultValue = false)
 
                 LaunchedEffect(Unit) {
                     if (pendingIntent != null) {
@@ -909,63 +911,88 @@ class MainActivity : ComponentActivity() {
                                             )
                                         },
                                         actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.music_history),
-                                                        contentDescription = stringResource(R.string.history)
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats)
-                                                )
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together)
-                                                    )
-                                                }
-                                            }
-                                             IconButton(onClick = {
-                                                  if (enableSettingsPopup) {
-                                                      showSettingDialoge = true
-                                                  } else {
-                                                      navController.navigate("settings")
-                                                  }
-                                              }) {
-                                                BadgedBox(badge = {}) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier
-                                                                .size(24.dp)
-                                                                .clip(CircleShape)
-                                                        )
-                                                    } else {
-                                                        val composition by rememberLottieComposition(
-                                                            LottieCompositionSpec.RawRes(R.raw.setting)
-                                                        )
-                                                        val progress by animateLottieCompositionAsState(
-                                                            composition = composition,
-                                                            isPlaying = true,
-                                                            iterations = 1,
-                                                            speed = 1.5f
-                                                        )
+                                            val (enableSettingsPopup) = rememberPreference(EnableSettingsPopupKey, defaultValue = true)
 
-                                                        LottieAnimation(
-                                                            composition = composition,
-                                                            progress = { progress },
-                                                            modifier = Modifier.size(50.dp),
-                                                            contentScale = ContentScale.Fit
+                                            if (!enableSettingsPopup) {
+                                                if (showHistoryButton) {
+                                                    IconButton(onClick = { navController.navigate("history") }) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.music_history),
+                                                            contentDescription = stringResource(R.string.history)
                                                         )
                                                     }
                                                 }
+                                                IconButton(onClick = { navController.navigate("stats") }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.stats),
+                                                        contentDescription = stringResource(R.string.stats)
+                                                    )
+                                                }
+                                                if (listenTogetherInTopBar) {
+                                                    IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.group_outlined),
+                                                            contentDescription = stringResource(R.string.together)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            if (enableSettingsPopup && accountImageUrl != null) {
+                                                IconButton(onClick = { navController.navigate("settings/account") }) {
+                                                    AsyncImage(
+                                                        model = accountImageUrl,
+                                                        contentDescription = stringResource(R.string.account),
+                                                        modifier = Modifier
+                                                            .size(24.dp)
+                                                            .clip(CircleShape)
+                                                    )
+                                                }
+                                            }
+                                            
+                                            Box {
+                                                var showSettingsDropdown by remember { mutableStateOf(false) }
+                                                IconButton(onClick = { 
+                                                    if (enableSettingsPopup) {
+                                                        showSettingsDropdown = true 
+                                                    } else {
+                                                        navController.navigate("settings")
+                                                    }
+                                                }) {
+                                                    BadgedBox(badge = {}) {
+                                                        if (!enableSettingsPopup && accountImageUrl != null) {
+                                                            AsyncImage(
+                                                                model = accountImageUrl,
+                                                                contentDescription = stringResource(R.string.account),
+                                                                modifier = Modifier
+                                                                    .size(24.dp)
+                                                                    .clip(CircleShape)
+                                                            )
+                                                        } else {
+                                                            val composition by rememberLottieComposition(
+                                                                LottieCompositionSpec.RawRes(R.raw.setting)
+                                                            )
+                                                            val progress by animateLottieCompositionAsState(
+                                                                composition = composition,
+                                                                isPlaying = true,
+                                                                iterations = 1,
+                                                                speed = 1.5f
+                                                            )
+    
+                                                            LottieAnimation(
+                                                                composition = composition,
+                                                                progress = { progress },
+                                                                modifier = Modifier.size(50.dp),
+                                                                contentScale = ContentScale.Fit
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                SettingsDropdownMenu(
+                                                    expanded = showSettingsDropdown,
+                                                    onDismissRequest = { showSettingsDropdown = false },
+                                                    onNavigate = { route -> navController.navigate(route) },
+                                                    homeViewModel = homeViewModel
+                                                )
                                             }
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
@@ -1296,17 +1323,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-
-                    if (showSettingDialoge) {
-                        SettingDialoge(
-                            onDismissRequest = { showSettingDialoge = false },
-                            onNavigate = { route ->
-                                showSettingDialoge = false
-                                navController.navigate(route)
-                            },
-                            homeViewModel = homeViewModel
-                        )
-                    }
                 }
             }
         }
@@ -1325,6 +1341,15 @@ class MainActivity : ComponentActivity() {
         if (!listenCode.isNullOrBlank() && isListenLink) {
             val username = dataStore.get(ListenTogetherUsernameKey, "").ifBlank { "Guest" }
             listenTogetherManager.joinRoom(listenCode, username)
+            return
+        }
+
+        val isOAuthCallback = uri.host?.equals("oauth2callback", ignoreCase = true) == true
+        if (isOAuthCallback) {
+            val code = uri.getQueryParameter("code")
+            if (!code.isNullOrBlank()) {
+                gitHubViewModel.exchangeCodeForToken(this, code)
+            }
             return
         }
 
