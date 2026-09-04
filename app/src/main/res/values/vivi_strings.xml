@@ -658,6 +658,16 @@
     <string name="listen_together_room_code">Room code</string>
     <string name="listen_together_leave_room">Leave room</string>
     <string name="listen_together_you_are_host">You are the host</string>
+    <string name="personal_sync_title">Personal device sync</string>
+    <string name="personal_sync_start">Start syncing</string>
+    <string name="personal_sync_start_desc">Creates a private sync room just for your own devices - no one else can join without the code shown next. Enter that code on your other devices once to pair them; after that they\'ll reconnect automatically whenever you open the app.</string>
+    <string name="personal_sync_join">Join with code</string>
+    <string name="personal_sync_join_desc">Enter the code shown on the device where you started personal sync. You\'ll only need to do this once - this device will remember it and reconnect automatically from now on.</string>
+    <string name="personal_sync_device_name">Device name</string>
+    <string name="personal_sync_active">Synced - room code %1$s</string>
+    <string name="personal_sync_inactive">Off</string>
+    <string name="personal_sync_stop">Stop syncing</string>
+    <string name="personal_sync_desc">Keep playback in sync across all of your own devices signed into this account - start it on one device, control it from any other. Reuses the same connection as Listen Together above, just scoped to your own devices instead of a room for friends.</string>
     <string name="listen_together_you_are_guest">You are a guest</string>
     <string name="mute">Mute</string>
     <string name="unmute">Unmute</string>
