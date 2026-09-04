@@ -76,8 +76,11 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
+<<<<<<< HEAD
 import com.music.innertube.strategy.ContentHints
+=======
 import com.music.innertube.pages.RadioChip
+>>>>>>> beta
 import com.music.lastfm.LastFM
 import com.music.vivi.MainActivity
 import com.music.vivi.R
@@ -261,6 +264,9 @@ class MusicService :
 
     @Inject
     lateinit var listenTogetherManager: com.music.vivi.listentogether.ListenTogetherManager
+
+    @Inject
+    lateinit var personalDeviceSyncManager: com.music.vivi.listentogether.PersonalDeviceSyncManager
 
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
