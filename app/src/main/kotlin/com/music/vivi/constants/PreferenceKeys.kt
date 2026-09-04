@@ -237,6 +237,17 @@ val ListenTogetherSessionTokenKey = stringPreferencesKey("listenTogetherSessionT
 val ListenTogetherRoomCodeKey = stringPreferencesKey("listenTogetherRoomCode")
 val ListenTogetherUserIdKey = stringPreferencesKey("listenTogetherUserId")
 val ListenTogetherIsHostKey = booleanPreferencesKey("listenTogetherIsHost")
+
+// "Personal Device Sync": a thin, opt-in wrapper around Listen Together for
+// syncing your OWN devices under one account, rather than hosting a room for
+// other people. Reuses the exact same protocol/server - the only difference
+// is these two keys persist the room code INDEFINITELY (ListenTogetherRoomCodeKey/
+// SessionTokenKey above are deliberately short-lived, a 10-minute grace period
+// for crash/network recovery, not meant for "reopen the app next week and
+// still be synced"). See PersonalDeviceSyncManager for how these get used.
+val PersonalSyncEnabledKey = booleanPreferencesKey("personalSyncEnabled")
+val PersonalSyncRoomCodeKey = stringPreferencesKey("personalSyncRoomCode")
+val PersonalSyncDeviceNameKey = stringPreferencesKey("personalSyncDeviceName")
 val ListenTogetherSessionTimestampKey = longPreferencesKey("listenTogetherSessionTimestamp")
 
 val LastFMSessionKey = stringPreferencesKey("lastfmSession")
