@@ -76,11 +76,8 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
-<<<<<<< HEAD
 import com.music.innertube.strategy.ContentHints
-=======
 import com.music.innertube.pages.RadioChip
->>>>>>> beta
 import com.music.lastfm.LastFM
 import com.music.vivi.MainActivity
 import com.music.vivi.R
