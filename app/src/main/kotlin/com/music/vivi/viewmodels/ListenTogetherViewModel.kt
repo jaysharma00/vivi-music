@@ -7,6 +7,7 @@ package com.music.vivi.viewmodels
 
 import androidx.lifecycle.ViewModel
 import com.music.vivi.listentogether.ListenTogetherManager
+import com.music.vivi.listentogether.PersonalDeviceSyncManager
 import androidx.lifecycle.viewModelScope
 import com.music.vivi.listentogether.ListenTogetherEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,8 +17,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ListenTogetherViewModel @Inject constructor(
-    private val manager: ListenTogetherManager
+    private val manager: ListenTogetherManager,
+    private val personalSyncManager: PersonalDeviceSyncManager
 ) : ViewModel() {
+
+    val isPersonalSyncActive = personalSyncManager.isPersonalSyncActive
 
     val connectionState = manager.connectionState
     val roomState = manager.roomState
@@ -121,4 +125,20 @@ class ListenTogetherViewModel @Inject constructor(
     fun getPersistedRoomCode(): String? = manager.getPersistedRoomCode()
     
     fun getSessionAge(): Long = manager.getSessionAge()
+
+    fun startPersonalSync(deviceName: String) {
+        personalSyncManager.startPersonalSync(deviceName)
+    }
+
+    fun joinPersonalSync(roomCode: String, deviceName: String) {
+        personalSyncManager.joinPersonalSync(roomCode, deviceName)
+    }
+
+    fun stopPersonalSync() {
+        personalSyncManager.stopPersonalSync()
+    }
+
+    suspend fun personalSyncEnabled(): Boolean = personalSyncManager.isEnabled()
+
+    suspend fun personalSyncRoomCode(): String? = personalSyncManager.currentRoomCode()
 }
