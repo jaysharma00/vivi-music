@@ -5,6 +5,7 @@
 
 package com.music.vivi.ui.screens.settings.integrations
 
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
@@ -126,6 +127,10 @@ fun ListenTogetherSettings(
     var showLogsDialog by rememberSaveable { mutableStateOf(false) }
     var showBlockedUsersDialog by rememberSaveable { mutableStateOf(false) }
     var roomCodeInput by rememberSaveable { mutableStateOf("") }
+    var showStartPersonalSyncDialog by rememberSaveable { mutableStateOf(false) }
+    var showJoinPersonalSyncDialog by rememberSaveable { mutableStateOf(false) }
+    var personalSyncRoomCodeInput by rememberSaveable { mutableStateOf("") }
+    val isPersonalSyncActive by viewModel.isPersonalSyncActive.collectAsState()
     
     val avatarOptions = remember {
         listOf(
@@ -230,6 +235,104 @@ fun ListenTogetherSettings(
         }
     }
     
+    if (showStartPersonalSyncDialog) {
+        var deviceName by rememberSaveable(showStartPersonalSyncDialog) {
+            mutableStateOf("${Build.MANUFACTURER} ${Build.MODEL}".trim())
+        }
+
+        DefaultDialog(
+            onDismiss = { showStartPersonalSyncDialog = false },
+            icon = { Icon(painterResource(R.drawable.home_speaker_devices), contentDescription = null) },
+            title = { Text(stringResource(R.string.personal_sync_start)) },
+            buttons = {
+                TextButton(onClick = { showStartPersonalSyncDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val finalName = deviceName.trim()
+                        if (finalName.isNotBlank()) {
+                            viewModel.startPersonalSync(finalName)
+                            showStartPersonalSyncDialog = false
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.personal_sync_start))
+                }
+            }
+        ) {
+            Column {
+                Text(
+                    stringResource(R.string.personal_sync_start_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                OutlinedTextField(
+                    value = deviceName,
+                    onValueChange = { deviceName = it },
+                    label = { Text(stringResource(R.string.personal_sync_device_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    if (showJoinPersonalSyncDialog) {
+        var deviceName by rememberSaveable(showJoinPersonalSyncDialog) {
+            mutableStateOf("${Build.MANUFACTURER} ${Build.MODEL}".trim())
+        }
+
+        DefaultDialog(
+            onDismiss = { showJoinPersonalSyncDialog = false },
+            icon = { Icon(painterResource(R.drawable.sync), contentDescription = null) },
+            title = { Text(stringResource(R.string.personal_sync_join)) },
+            buttons = {
+                TextButton(onClick = { showJoinPersonalSyncDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val code = personalSyncRoomCodeInput.trim()
+                        val finalName = deviceName.trim()
+                        if (code.isNotBlank() && finalName.isNotBlank()) {
+                            viewModel.joinPersonalSync(code, finalName)
+                            showJoinPersonalSyncDialog = false
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.personal_sync_join))
+                }
+            }
+        ) {
+            Column {
+                Text(
+                    stringResource(R.string.personal_sync_join_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                OutlinedTextField(
+                    value = personalSyncRoomCodeInput,
+                    onValueChange = { personalSyncRoomCodeInput = it },
+                    label = { Text(stringResource(R.string.listen_together_room_code)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+                OutlinedTextField(
+                    value = deviceName,
+                    onValueChange = { deviceName = it },
+                    label = { Text(stringResource(R.string.personal_sync_device_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
     if (showCreateRoomDialog) {
         var createUsername by rememberSaveable(showCreateRoomDialog) { mutableStateOf(username) }
 
@@ -529,6 +632,67 @@ fun ListenTogetherSettings(
                     onClick = { showLogsDialog = true }
                 )
             )
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.personal_sync_title),
+            items = listOfNotNull(
+                Material3SettingsItem(
+                    isExpressive = true,
+                    descriptionBelow = true,
+                    icon = painterResource(R.drawable.home_speaker_devices),
+                    title = { Text(stringResource(R.string.personal_sync_title)) },
+                    description = {
+                        Text(
+                            if (isPersonalSyncActive) {
+                                stringResource(R.string.personal_sync_active, roomState?.roomCode ?: "…")
+                            } else {
+                                stringResource(R.string.personal_sync_inactive)
+                            }
+                        )
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = isPersonalSyncActive,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    showStartPersonalSyncDialog = true
+                                } else {
+                                    viewModel.stopPersonalSync()
+                                }
+                            },
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (isPersonalSyncActive) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                )
+                            }
+                        )
+                    },
+                    onClick = {
+                        if (isPersonalSyncActive) viewModel.stopPersonalSync() else showStartPersonalSyncDialog = true
+                    }
+                ),
+                if (!isPersonalSyncActive) Material3SettingsItem(
+                    isExpressive = true,
+                    icon = painterResource(R.drawable.sync),
+                    title = { Text(stringResource(R.string.personal_sync_join)) },
+                    description = { Text(stringResource(R.string.personal_sync_join_desc)) },
+                    onClick = { showJoinPersonalSyncDialog = true }
+                ) else null
+            )
+        )
+
+        Text(
+            text = stringResource(R.string.personal_sync_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
         Row(
@@ -892,4 +1056,3 @@ fun BlockedUsersDialog(
         }
     }
 }
-
