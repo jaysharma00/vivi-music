@@ -128,6 +128,7 @@ fun PlayerV2(
     val castDuration by castHandler?.castDuration?.collectAsState() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
     val castIsBuffering by castHandler?.castIsBuffering?.collectAsState() ?: remember { mutableStateOf(false) }
+    val castVolume by castHandler?.castVolume?.collectAsState() ?: remember { mutableFloatStateOf(1f) }
     val connectManager = LocalViviConnectManager.current
     val isControllingRemote by connectManager?.isControllingRemote?.collectAsState() ?: remember { mutableStateOf(false) }
     val remotePlaybackState by connectManager?.remotePlaybackState?.collectAsState() ?: remember { mutableStateOf(null) }
@@ -999,6 +1000,7 @@ fun PlayerV2(
                             modifier = Modifier
                                 .absoluteOffset(y = 30.dp)
                                 .widthIn(max = 84.dp)
+                        )
                     } else if (connectedConnectDevice != null) {
                         IconButton(
                             onClick = { showAudioDeviceBottomSheet = true },
