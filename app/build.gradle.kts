@@ -240,6 +240,7 @@ dependencies {
     implementation(libs.compose.ui.util)
     implementation(libs.compose.ui.tooling)
     implementation(libs.compose.animation)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.reorderable)
 
     implementation(libs.viewmodel)
@@ -319,4 +320,3 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.androidx.core.splashscreen)
 }
-
