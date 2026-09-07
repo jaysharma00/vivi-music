@@ -69,7 +69,6 @@ import com.music.vivi.constants.DensityScale
 import com.music.vivi.constants.DensityScaleKey
 import com.music.vivi.constants.DynamicThemeKey
 import com.music.vivi.constants.EnableDynamicIconKey
-import com.music.vivi.constants.EnableSettingsPopupKey
 import com.music.vivi.constants.EnableHighRefreshRateKey
 import com.music.vivi.constants.EnableLyricsThumbnailPlayPauseKey
 import com.music.vivi.constants.GridItemSize
@@ -100,7 +99,6 @@ import com.music.vivi.constants.ShowCachedPlaylistKey
 import com.music.vivi.constants.ShowDownloadedPlaylistKey
 import com.music.vivi.constants.ShowLikedPlaylistKey
 import com.music.vivi.constants.ShowTopPlaylistKey
-import com.music.vivi.constants.ShowUploadedPlaylistKey
 import com.music.vivi.constants.SliderStyle
 import com.music.vivi.constants.SliderStyleKey
 import com.music.vivi.constants.FloatingNavBarKey
@@ -147,6 +145,7 @@ import com.music.vivi.constants.LyricsScrollKey
 import com.music.vivi.constants.MiniPlayerBackgroundStyleKey
 import com.music.vivi.constants.ShowAudioQualityBadgeKey
 import com.music.vivi.constants.ShowCommentButtonKey
+import com.music.vivi.constants.EnableSettingsPopupKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,16 +167,16 @@ fun AppearanceSettings(
         EnableDynamicIconKey,
         defaultValue = true
     )
+    val (enableSettingsPopup, onEnableSettingsPopupChange) = rememberPreference(
+        EnableSettingsPopupKey,
+        defaultValue = true
+    )
     val (enableHighRefreshRate, onEnableHighRefreshRateChange) = rememberPreference(
         EnableHighRefreshRateKey,
         defaultValue = true
     )
     val (showAudioQualityBadge, onShowAudioQualityBadgeChange) = rememberPreference(
         ShowAudioQualityBadgeKey,
-        defaultValue = false
-    )
-    val (enableSettingsPopup, onEnableSettingsPopupChange) = rememberPreference(
-        EnableSettingsPopupKey,
         defaultValue = false
     )
     val (selectedThemeColorInt) = rememberPreference(
@@ -426,10 +425,6 @@ fun AppearanceSettings(
         ShowCachedPlaylistKey,
         defaultValue = true
     )
-    val (showUploadedPlaylist, onShowUploadedPlaylistChange) = rememberPreference(
-        ShowUploadedPlaylistKey,
-        defaultValue = true
-    )
     val (showCommentButton, onShowCommentButtonChange) = rememberPreference(
         ShowCommentButtonKey,
         defaultValue = true
@@ -472,6 +467,9 @@ fun AppearanceSettings(
                     PlayerDesignOption.V2 -> {
                         onUsePlayerV2Change(true)
                         onUseNewPlayerDesignChange(false)
+                        if (playerBackground == PlayerBackgroundStyle.APPLE_MUSIC) {
+                            onPlayerBackgroundChange(PlayerBackgroundStyle.DEFAULT)
+                        }
                     }
                 }
                 showPlayerDesignDialog = false
@@ -1336,6 +1334,7 @@ fun AppearanceSettings(
                                 AppFont.SANS_FLEX -> stringResource(R.string.font_sans_flex)
                                 AppFont.OUTFIT -> stringResource(R.string.font_outfit)
                                 AppFont.PLUS_JAKARTA_SANS -> stringResource(R.string.font_plus_jakarta_sans)
+                                AppFont.CUSTOM -> stringResource(R.string.font_custom)
                             }
                             Text(fontLabel)
                         },
@@ -1365,11 +1364,12 @@ fun AppearanceSettings(
                         onClick = { onEnableHighRefreshRateChange(!enableHighRefreshRate) }
                     )
                 )
+
                 add(
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.settings),
-                        title = { Text(stringResource(R.string.enable_settings_popup)) },
-                        description = { Text(stringResource(R.string.enable_settings_popup_desc)) },
+                        icon = painterResource(R.drawable.settings), // Or tuning/setting generic icon
+                        title = { Text("Enable Settings Dropdown") },
+                        description = { Text("Show a Material 3 dropdown menu when clicking the settings icon on the home screen") },
                         trailingContent = {
                             Switch(
                                 checked = enableSettingsPopup,
@@ -1388,6 +1388,7 @@ fun AppearanceSettings(
                         onClick = { onEnableSettingsPopupChange(!enableSettingsPopup) }
                     )
                 )
+
                 // Only show dynamic theme option when using the default/dynamic color
                 // When a custom color is selected, dynamic theme is automatically disabled
                 if (!isUsingCustomColor) {
@@ -2498,26 +2499,6 @@ fun AppearanceSettings(
                         )
                     },
                     onClick = { onShowCachedPlaylistChange(!showCachedPlaylist) }
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.backup),
-                    title = { Text(stringResource(R.string.show_uploaded_playlist)) },
-                    trailingContent = {
-                        Switch(
-                            checked = showUploadedPlaylist,
-                            onCheckedChange = onShowUploadedPlaylistChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (showUploadedPlaylist) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onShowUploadedPlaylistChange(!showUploadedPlaylist) }
                 )
             )
         )

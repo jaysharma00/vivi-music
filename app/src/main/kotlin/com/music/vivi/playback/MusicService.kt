@@ -76,7 +76,6 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
-import com.music.innertube.strategy.ContentHints
 import com.music.innertube.pages.RadioChip
 import com.music.lastfm.LastFM
 import com.music.vivi.MainActivity
@@ -145,7 +144,6 @@ import com.music.vivi.sponsorblock.SponsorBlockApi
 import com.music.vivi.sponsorblock.SponsorSegment
 import com.music.vivi.constants.IpVersionKey
 import com.music.innertube.models.IpVersion
-import com.music.innertube.models.YouTubeClient
 import okhttp3.Dns
 import java.net.InetAddress
 import java.net.Inet4Address
@@ -178,7 +176,6 @@ import com.music.vivi.models.PersistPlayerState
 import com.music.vivi.models.PersistQueue
 import com.music.vivi.models.toMediaMetadata
 import com.music.vivi.playback.audio.SilenceDetectorAudioProcessor
-import com.music.vivi.playback.audio.StereoPanAudioProcessor
 import com.music.vivi.playback.queues.EmptyQueue
 import com.music.vivi.playback.queues.ListQueue
 import com.music.vivi.playback.queues.Queue
@@ -187,6 +184,7 @@ import com.music.vivi.playback.queues.filterExplicit
 import com.music.vivi.playback.queues.filterVideoSongs
 import com.music.vivi.utils.CoilBitmapLoader
 import com.music.vivi.utils.DiscordRPC
+import com.music.vivi.utils.InnerTubeXPlayer
 import com.music.vivi.utils.NetworkConnectivityObserver
 import com.music.vivi.utils.ScrobbleManager
 import com.music.vivi.utils.SyncUtils
@@ -375,7 +373,6 @@ class MusicService :
     val playerFlow = _playerFlow.asStateFlow()
 
     private val playerSilenceProcessors = HashMap<Player, SilenceDetectorAudioProcessor>()
-    private val playerPanProcessors = HashMap<Player, StereoPanAudioProcessor>()
 
 
     private val instantSilenceSkipEnabled = MutableStateFlow(false)
@@ -402,7 +399,7 @@ class MusicService :
     private var prefetchJob: Job? = null
 
     // URL cache for stream URLs - class-level so it can be invalidated on errors
-    private val songUrlCache = StreamUrlCache()
+    private val songUrlCache = HashMap<String, Pair<String, Long>>()
 
     // Flag to bypass cache when quality changes - forces fresh stream fetch
     private val bypassCacheForQualityChange = mutableSetOf<String>()
@@ -637,7 +634,7 @@ class MusicService :
                     Timber.tag("MusicService").i("RELOADING STREAM: $mediaId at position ${currentPosition}ms")
 
                     // Clear cached URL to force fresh fetch
-                    songUrlCache.invalidate(mediaId)
+                    songUrlCache.remove(mediaId)
 
                     // CRITICAL: Clear caches synchronously to prevent format parsing errors
                     runBlocking(Dispatchers.IO) {
@@ -684,7 +681,7 @@ class MusicService :
                     val wasPlaying = player.isPlaying
 
                     // Clear cached URL
-                    songUrlCache.invalidate(mediaId)
+                    songUrlCache.remove(mediaId)
 
                     // Reload player
                     player.stop()
@@ -1085,7 +1082,6 @@ class MusicService :
         equalizerService.addAudioProcessor(eqProcessor)
 
         val silenceProcessor = SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
-        val panProcessor = StereoPanAudioProcessor()
 
         // Set initial state
         runBlocking {
@@ -1096,7 +1092,7 @@ class MusicService :
 
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor, panProcessor))
+            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor))
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setAudioAttributes(
@@ -1112,7 +1108,6 @@ class MusicService :
             .build()
 
         playerSilenceProcessors[player] = silenceProcessor
-        playerPanProcessors[player] = panProcessor
 
         player.apply {
                 runBlocking {
@@ -1368,7 +1363,7 @@ class MusicService :
 
     private suspend fun recoverSong(
         mediaId: String,
-        playbackData: YTPlayerUtils.PlaybackData? = null
+        playbackData: InnerTubeXPlayer.PlaybackData? = null
     ) {
         val song = database.song(mediaId).first()
         val mediaMetadata = withContext(Dispatchers.Main) {
@@ -2255,7 +2250,7 @@ class MusicService :
 
         // Nothing to do — URL is already cached and hasn't expired
         val cachedEntry = songUrlCache[nextMediaId]
-        if (cachedEntry != null) return
+        if (cachedEntry != null && cachedEntry.second > System.currentTimeMillis()) return
 
         prefetchJob = scope.launch(Dispatchers.IO + SilentHandler) {
             Timber.tag(TAG).d("[Prefetch] Resolving stream URL for next track: $nextMediaId")
@@ -2270,13 +2265,9 @@ class MusicService :
             result.getOrNull()?.getOrNull()?.let { playbackData ->
                 // Only write to cache if the job wasn't cancelled while we were resolving
                 if (isActive) {
-                    songUrlCache.put(
-                        mediaId = nextMediaId,
-                        url = playbackData.streamUrl,
-                        requestHeaders = playbackData.streamHeaders,
-                        clientName = playbackData.streamClient,
-                        expiresInSeconds = playbackData.streamExpiresInSeconds,
-                    )
+                    songUrlCache[nextMediaId] =
+                        playbackData.streamUrl to
+                            System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
                     Timber.tag(TAG).d("[Prefetch] Cached stream URL for $nextMediaId (expires in ${playbackData.streamExpiresInSeconds}s)")
 
                     playbackData.format?.let { format ->
@@ -2692,7 +2683,7 @@ class MusicService :
         Timber.tag(TAG).d("Performing aggressive cache clear for $mediaId")
 
         // Clear URL cache
-        songUrlCache.invalidate(mediaId)
+        songUrlCache.remove(mediaId)
 
         // Clear player cache
         try {
@@ -2702,13 +2693,7 @@ class MusicService :
             Timber.tag(TAG).e(e, "Failed to clear player cache for $mediaId")
         }
 
-        // Clear decryption caches
-        try {
-            YTPlayerUtils.forceRefreshForVideo(mediaId)
-            Timber.tag(TAG).d("Cleared decryption caches for $mediaId")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear decryption caches for $mediaId")
-        }
+
     }
 
     /**
@@ -2906,15 +2891,10 @@ class MusicService :
         incrementRetryCount(mediaId)
 
         // Clear the cached URL
-        songUrlCache.invalidate(mediaId)
+        songUrlCache.remove(mediaId)
         Timber.tag(TAG).d("Cleared cached URL for $mediaId")
 
-        // Clear decryption caches
-        try {
-            YTPlayerUtils.forceRefreshForVideo(mediaId)
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear decryption caches")
-        }
+
 
         retryJob?.cancel()
         retryJob = scope.launch {
@@ -3041,12 +3021,6 @@ class MusicService :
     }
 
     private suspend fun performInstantSilenceSkip() {
-        if (player.playbackState == Player.STATE_BUFFERING || !player.isPlaying) {
-            val silenceProcessor = playerSilenceProcessors[player]
-            silenceProcessor?.resetTracking()
-            return
-        }
-
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
         if (duration <= INSTANT_SILENCE_SKIP_STEP_MS) return
 
@@ -3138,29 +3112,21 @@ class MusicService :
                     return@Factory dataSpec
                 }
 
-                songUrlCache[mediaId]?.let { cachedStream ->
+                songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
                     scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
-                    return@Factory dataSpec
-                        .withUri(cachedStream.url.toUri())
-                        .withRequestHeaders(dataSpec.httpRequestHeaders + cachedStream.requestHeaders)
+                    return@Factory dataSpec.withUri(it.first.toUri())
                 }
             } else {
                 Timber.tag("MusicService").i("BYPASSING CACHE for $mediaId due to quality change")
             }
 
-            val cacheGeneration = songUrlCache.generation(mediaId)
             Timber.tag("MusicService").i("FETCHING STREAM: $mediaId | quality=$audioQuality")
             val playbackData = runBlocking(Dispatchers.IO) {
-                val song = database.getSongByIdBlocking(mediaId)?.song
                 YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,
                     context = this@MusicService,
-                    contentHints = ContentHints(
-                        isExplicit = song?.explicit,
-                        isUploaded = song?.isUploaded,
-                    ),
                 )
             }.getOrElse { throwable ->
                 when (throwable) {
@@ -3228,23 +3194,9 @@ class MusicService :
 
                 val streamUrl = nonNullPlayback.streamUrl
 
-                songUrlCache.put(
-                    mediaId = mediaId,
-                    url = streamUrl,
-                    requestHeaders = nonNullPlayback.streamHeaders,
-                    clientName = nonNullPlayback.streamClient,
-                    expiresInSeconds = nonNullPlayback.streamExpiresInSeconds,
-                    expectedGeneration = cacheGeneration,
-                )
-
-                val cachedStream = songUrlCache[mediaId]
-                if (cachedStream != null) {
-                    return@Factory dataSpec
-                        .withUri(cachedStream.url.toUri())
-                        .withRequestHeaders(dataSpec.httpRequestHeaders + cachedStream.requestHeaders)
-                }
-
-                return@Factory dataSpec.withUri(streamUrl.toUri())
+                songUrlCache[mediaId] =
+                    streamUrl to System.currentTimeMillis() + (nonNullPlayback.streamExpiresInSeconds * 1000L)
+                return@Factory dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
             }
         }
     }
@@ -3263,8 +3215,7 @@ class MusicService :
 
     private fun createRenderersFactory(
         eqProcessor: CustomEqualizerAudioProcessor,
-        silenceProcessor: SilenceDetectorAudioProcessor,
-        panProcessor: StereoPanAudioProcessor
+        silenceProcessor: SilenceDetectorAudioProcessor
     ) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
@@ -3281,7 +3232,6 @@ class MusicService :
                         arrayOf(
                             eqProcessor,
                             silenceProcessor,
-                            panProcessor,
                         ),
                         SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                         SonicAudioProcessor(),
@@ -3428,7 +3378,6 @@ class MusicService :
         player.removeListener(this)
         player.removeListener(sleepTimer)
         playerSilenceProcessors.remove(player)
-        playerPanProcessors.remove(player)
         // Note: equalizerService audio processors are cleared in equalizerService.release() if needed,
         // or we can't easily reference the specific processor created in createExoPlayer here without storing it.
         // But since we are destroying the service, it's fine.
@@ -3573,8 +3522,6 @@ class MusicService :
         reason: Int
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-            silenceSkipJob?.cancel()
-            playerSilenceProcessors[player]?.resetTracking()
             scheduleCrossfade()
         }
     }
@@ -3702,12 +3649,6 @@ class MusicService :
             val stepTime = duration / steps
             val startVolume = try { fadingPlayer?.volume ?: 1f } catch(e:Exception) { 1f }
 
-            // Incoming track pans in from the right and settles center; outgoing
-            // track pans out to the left as it fades, instead of a plain
-            // volume-only crossfade. See StereoPanAudioProcessor.
-            val incomingPan = playerPanProcessors[player]
-            val outgoingPan = fadingPlayer?.let { playerPanProcessors[it] }
-
             for (i in 0..steps) {
                 if (!isActive) break
                 // Pause volume ramp if player is paused
@@ -3722,8 +3663,6 @@ class MusicService :
                 try {
                     player.volume = startVolume * fadeIn
                     fadingPlayer?.volume = startVolume * fadeOut
-                    incomingPan?.pan = 1f - progress
-                    outgoingPan?.pan = -progress
                 } catch (e: Exception) { break }
 
                 delay(stepTime)
@@ -3732,7 +3671,6 @@ class MusicService :
             try {
                 fadingPlayer?.volume = 0f
                 player.volume = startVolume
-                incomingPan?.pan = 0f
                 cleanupCrossfade()
             } catch (e: Exception) { }
         }
