@@ -6,16 +6,16 @@
 package com.music.vivi.ui.component
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.music.vivi.R
 
 @Composable
 fun ModernSwitch(
@@ -32,7 +32,7 @@ fun ModernSwitch(
         thumbContent = {
             if (checked) {
                 Icon(
-                    painter = painterResource(R.drawable.check),
+                    imageVector = Icons.Default.Check,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     // thumb is onPrimary (white), so icon must use primary to be visible
@@ -40,7 +40,7 @@ fun ModernSwitch(
                 )
             } else {
                 Icon(
-                    painter = painterResource(R.drawable.close),
+                    imageVector = Icons.Default.Close,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     // unchecked thumb is outline (grey), so surface (white/light) is visible on it

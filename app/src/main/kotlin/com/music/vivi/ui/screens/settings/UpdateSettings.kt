@@ -176,7 +176,13 @@ fun UpdateSettings(
                         }
                     },
                     onClick = {
-                        navController.navigate("update")
+                        val isFoss = !BuildConfig.CAST_AVAILABLE
+                        if (isFoss) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/vivizzz007/vivi-music/releases/latest"))
+                            context.startActivity(intent)
+                        } else {
+                            navController.navigate("update")
+                        }
                     }
                 ),
                 Material3SettingsItem(

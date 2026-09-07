@@ -18,7 +18,6 @@ import com.music.innertube.models.IpVersion
 val IsFirstRunKey = booleanPreferencesKey("isFirstRun")
 val EnableDynamicIconKey = booleanPreferencesKey("enableDynamicIcon")
 val EnableHighRefreshRateKey = booleanPreferencesKey("enableHighRefreshRate")
-val GitHubAccessTokenKey = stringPreferencesKey("gitHubAccessToken")
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
 val SelectedThemeColorKey = intPreferencesKey("selectedThemeColor")
 val DarkModeKey = stringPreferencesKey("darkMode")
@@ -26,15 +25,13 @@ val PureBlackKey = booleanPreferencesKey("pureBlack")
 val PureBlackMiniPlayerKey = booleanPreferencesKey("pureBlackMiniPlayer")
 val MiniPlayerOutlineKey = booleanPreferencesKey("miniPlayerOutline")
 val SelectedFontKey = stringPreferencesKey("selected_font")
-val CustomFontPathKey = stringPreferencesKey("custom_font_path")
 
 enum class AppFont(val value: String) {
     SYSTEM("system"),
     GOOGLE_SANS("google_sans"),
     SANS_FLEX("sans_flex"),
     OUTFIT("outfit"),
-    PLUS_JAKARTA_SANS("plus_jakarta_sans"),
-    CUSTOM("custom");
+    PLUS_JAKARTA_SANS("plus_jakarta_sans");
 
     companion object {
         fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM
@@ -84,8 +81,6 @@ val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnec
 val KeepScreenOn = booleanPreferencesKey("keepScreenOn")
 val DeveloperModeKey = booleanPreferencesKey("developerMode")
 val EnableSettingsPopupKey = booleanPreferencesKey("enableSettingsPopup")
-val HasStarredRepoKey = booleanPreferencesKey("hasStarredRepo")
-val LastSeenStarPromptVersionKey = stringPreferencesKey("lastSeenStarPromptVersion")
 
 enum class SliderStyle {
     DEFAULT,
@@ -106,7 +101,6 @@ val EnableMusixmatchKey = booleanPreferencesKey("enableMusixmatch")
 val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableUnisonKey = booleanPreferencesKey("enableUnison")
-val EnableBiniLyricsKey = booleanPreferencesKey("enableBiniLyrics")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -204,9 +198,6 @@ val CrossfadeGaplessKey = booleanPreferencesKey("crossfadeGapless")
 
 val MaxImageCacheSizeKey = intPreferencesKey("maxImageCacheSize")
 val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
-
-val AlwaysShowSkipNextKey = booleanPreferencesKey("alwaysShowSkipNext")
-val DisableScreenTimeoutKey = booleanPreferencesKey("disableScreenTimeout")
 
 val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
@@ -313,6 +304,7 @@ val ShowLikedPlaylistKey = booleanPreferencesKey("show_liked_playlist")
 val ShowDownloadedPlaylistKey = booleanPreferencesKey("show_downloaded_playlist")
 val ShowTopPlaylistKey = booleanPreferencesKey("show_top_playlist")
 val ShowCachedPlaylistKey = booleanPreferencesKey("show_cached_playlist")
+val ShowUploadedPlaylistKey = booleanPreferencesKey("show_uploaded_playlist")
 val ShowAudioQualityBadgeKey = booleanPreferencesKey("show_audio_quality_badge")
 val ShowCommentButtonKey = booleanPreferencesKey("show_comment_button")
 

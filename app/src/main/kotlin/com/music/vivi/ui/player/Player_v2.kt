@@ -19,6 +19,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -176,15 +180,10 @@ fun PlayerV2(
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    val (storedPlayerBackground, onPlayerBackgroundChange) = rememberEnumPreference(
+    val storedPlayerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
         defaultValue = PlayerBackgroundStyle.GRADIENT
     )
-    LaunchedEffect(storedPlayerBackground) {
-        if (storedPlayerBackground == PlayerBackgroundStyle.APPLE_MUSIC) {
-            onPlayerBackgroundChange(PlayerBackgroundStyle.DEFAULT)
-        }
-    }
     val playerBackground = if (storedPlayerBackground == PlayerBackgroundStyle.APPLE_MUSIC) {
         PlayerBackgroundStyle.DEFAULT
     } else {
@@ -535,7 +534,7 @@ fun PlayerV2(
                                             }
                                         ) {
                                             Icon(
-                                                painter = painterResource(R.drawable.more_horiz),
+                                                imageVector = Icons.Default.MoreHoriz,
                                                 contentDescription = "Options",
                                                 tint = adaptivePrimary,
                                             )
@@ -591,6 +590,11 @@ fun PlayerV2(
                                                 contentDescription = "Cover Art",
                                                 modifier = Modifier.fillMaxSize(),
                                                 contentScale = ContentScale.Crop
+                                            )
+                                            PlayerV2Canvas(
+                                                mediaMetadata = mediaMetadata,
+                                                isPlaying = isPlaying,
+                                                modifier = Modifier.fillMaxSize()
                                             )
                                         }
                                     }
@@ -685,7 +689,7 @@ fun PlayerV2(
                                             }
                                         ) {
                                             Icon(
-                                                painter = painterResource(R.drawable.more_vert),
+                                                imageVector = Icons.Default.MoreVert,
                                                 contentDescription = "Options",
                                                 tint = adaptivePrimary,
                                                 modifier = Modifier.size(24.dp)
@@ -842,7 +846,7 @@ fun PlayerV2(
                         ) {
                             if (isListenTogetherGuest) {
                                 Icon(
-                                    painter = painterResource(if (isMuted) R.drawable.volume_off else R.drawable.volume_up),
+                                    imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
                                     contentDescription = if (isMuted) "Unmute" else "Mute",
                                     modifier = Modifier.size(64.dp),
                                     tint = adaptivePrimary
@@ -880,7 +884,7 @@ fun PlayerV2(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(painterResource(R.drawable.volume_mute), contentDescription = "Volume Down", tint = adaptiveSecondary, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.VolumeMute, contentDescription = "Volume Down", tint = adaptiveSecondary, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(16.dp))
                         
                         val volumeInteractionSource = remember { MutableInteractionSource() }
@@ -923,7 +927,7 @@ fun PlayerV2(
                             modifier = Modifier.weight(1f).height(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                            Icon(painterResource(R.drawable.volume_up), contentDescription = "Volume Up", tint = adaptiveSecondary, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.VolumeUp, contentDescription = "Volume Up", tint = adaptiveSecondary, modifier = Modifier.size(24.dp))
                         }
                     }
                 }

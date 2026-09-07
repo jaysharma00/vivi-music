@@ -939,23 +939,32 @@ fun BottomSheetPlayer(
                                         .fillMaxSize()
                                         .alpha(backgroundAlpha)
                                 ) {
+                                    // 1. The source component displaying the unblurred image
                                     AsyncImage(
                                         model = ImageRequest.Builder(context)
                                             .data(thumbnailUrl)
-                                            .size(100, 100) // Lower resolution for better performance
+                                            .size(256, 256) // high enough resolution for good source detail
                                             .allowHardware(false)
                                             .build(),
                                         contentDescription = null,
-                                        contentScale = ContentScale.FillBounds,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .blur(120.dp) // hardware-efficient native Compose blur on small image
+                                            .hazeSource(state = playerHazeState) // Mark as blur source
                                     )
 
+                                    // 2. The overlay component rendering the Haze blur effect
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(Color.Black.copy(alpha = 0.30f))
+                                            .hazeEffect(
+                                                state = playerHazeState,
+                                                style = HazeStyle(
+                                                    blurRadius = 80.dp,
+                                                    tint = HazeTint(Color.Black.copy(alpha = 0.30f)),
+                                                    noiseFactor = 0.15f
+                                                )
+                                            )
                                     )
                                 }
                             }

@@ -41,7 +41,6 @@ object Musixmatch {
 
     private val secretCache = AtomicReference<String?>(null)
     private val tokenCache = AtomicReference<String?>(null)
-    private val processGuid = java.util.UUID.randomUUID().toString()
 
     private val client by lazy {
         HttpClient(OkHttp) {
@@ -132,7 +131,7 @@ object Musixmatch {
         val cached = tokenCache.get()
         if (cached != null) return cached
 
-        val tokenUrl = "${BASE_URL}token.get?app_id=mobile-app-v1.0&guid=$processGuid&format=json"
+        val tokenUrl = "${BASE_URL}token.get?app_id=web-desktop-app-v1.0&format=json"
         val signedUrl = sign(tokenUrl, secret)
         
         val response = client.get(signedUrl) {
@@ -202,7 +201,7 @@ object Musixmatch {
             // 1. Search for the track using separate track/artist params for accurate version matching
             val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.name())
             val encodedArtist = URLEncoder.encode(artist, StandardCharsets.UTF_8.name())
-            val searchUrl = "${BASE_URL}track.search?app_id=mobile-app-v1.0&format=json&q_track=$encodedTitle&q_artist=$encodedArtist&f_has_lyrics=true&page_size=10&usertoken=$token"
+            val searchUrl = "${BASE_URL}track.search?app_id=web-desktop-app-v1.0&format=json&q_track=$encodedTitle&q_artist=$encodedArtist&f_has_lyrics=true&page_size=10&usertoken=$token"
             val signedSearch = sign(searchUrl, secret)
 
             val searchResponse = client.get(signedSearch) {
@@ -289,7 +288,7 @@ object Musixmatch {
 
                 val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.name())
                 val encodedArtist = URLEncoder.encode(artist, StandardCharsets.UTF_8.name())
-                val searchUrl = "${BASE_URL}track.search?app_id=mobile-app-v1.0&format=json&q_track=$encodedTitle&q_artist=$encodedArtist&f_has_lyrics=true&page_size=10&usertoken=$token"
+                val searchUrl = "${BASE_URL}track.search?app_id=web-desktop-app-v1.0&format=json&q_track=$encodedTitle&q_artist=$encodedArtist&f_has_lyrics=true&page_size=10&usertoken=$token"
                 val signedSearch = sign(searchUrl, secret)
 
                 val searchResponse = client.get(signedSearch) {
@@ -359,7 +358,7 @@ object Musixmatch {
     }
 
     private suspend fun getRichSyncLyrics(trackId: Long, token: String, secret: String): Result<String> = runCatching {
-        val richsyncUrl = "${BASE_URL}track.richsync.get?app_id=mobile-app-v1.0&format=json&track_id=$trackId&usertoken=$token"
+        val richsyncUrl = "${BASE_URL}track.richsync.get?app_id=web-desktop-app-v1.0&format=json&track_id=$trackId&usertoken=$token"
         val signedUrl = sign(richsyncUrl, secret)
         
         val response = client.get(signedUrl) {
@@ -388,7 +387,7 @@ object Musixmatch {
     }
 
     private suspend fun getSubtitleLyrics(trackId: Long, token: String, secret: String): Result<String> = runCatching {
-        val subtitleUrl = "${BASE_URL}track.subtitle.get?app_id=mobile-app-v1.0&format=json&track_id=$trackId&usertoken=$token"
+        val subtitleUrl = "${BASE_URL}track.subtitle.get?app_id=web-desktop-app-v1.0&format=json&track_id=$trackId&usertoken=$token"
         val signedUrl = sign(subtitleUrl, secret)
 
         val response = client.get(signedUrl) {
@@ -417,7 +416,7 @@ object Musixmatch {
     }
 
     private suspend fun getPlainLyrics(trackId: Long, token: String, secret: String): Result<String> = runCatching {
-        val lyricsUrl = "${BASE_URL}track.lyrics.get?app_id=mobile-app-v1.0&format=json&track_id=$trackId&usertoken=$token"
+        val lyricsUrl = "${BASE_URL}track.lyrics.get?app_id=web-desktop-app-v1.0&format=json&track_id=$trackId&usertoken=$token"
         val signedUrl = sign(lyricsUrl, secret)
 
         val response = client.get(signedUrl) {

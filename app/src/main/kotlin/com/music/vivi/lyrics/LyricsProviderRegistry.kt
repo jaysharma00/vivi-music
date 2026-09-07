@@ -21,7 +21,6 @@ object LyricsProviderRegistry {
         "LrcLib"          to LrcLibLyricsProvider,
         "Kugou"           to KuGouLyricsProvider,
         "Unison"          to UnisonLyricsProvider,
-        "BiniLyrics"      to BiniLyricsProvider,
         "YouTubeSubtitle" to YouTubeSubtitleLyricsProvider,
         "YouTubeMusic"    to YouTubeLyricsProvider,
     )
@@ -46,7 +45,6 @@ object LyricsProviderRegistry {
         "LrcLib",
         "Kugou",
         "Unison",
-        "BiniLyrics",
         "YouTubeSubtitle",
         "YouTubeMusic",
     )
@@ -74,7 +72,6 @@ object LyricsProviderRegistry {
         "LrcLib"          -> "LrcLib"
         "Kugou"           -> "KuGou"
         "Unison"          -> "Unison"
-        "BiniLyrics"      -> "Bini Lyrics"
         "YouTubeSubtitle" -> "YouTube Subtitle"
         "YouTubeMusic"    -> "YouTube Music"
         else              -> name

@@ -55,7 +55,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import com.music.vivi.ui.theme.vivimusicTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.Lyrics
+import androidx.compose.material.icons.rounded.Gavel
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -91,7 +106,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
-
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
@@ -121,13 +136,18 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.music.vivi.constants.IsFirstRunKey
+import com.music.vivi.ui.theme.vivimusicTheme
 import com.music.vivi.ui.utils.safeOpenUri
 import com.music.vivi.utils.dataStore
 import com.music.vivi.utils.get
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.datastore.preferences.core.edit
 import android.app.Activity
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Info
 import com.music.vivi.constants.AppLanguageKey
 import com.music.vivi.constants.SYSTEM_DEFAULT
 import com.music.vivi.constants.LanguageCodeToName
@@ -136,10 +156,14 @@ import com.music.vivi.utils.rememberPreference
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.net.toUri
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 
@@ -201,7 +225,7 @@ class WelcomeActivity : ComponentActivity() {
 @OptIn(ExperimentalTextApi::class)
 val GoogleSansFlex = FontFamily(
     Font(
-        resId = com.music.vivi.R.font.plus_jakarta_sans,
+        resId = com.music.vivi.R.font.google_sans_flex,
         weight = FontWeight.Normal,
         style = FontStyle.Normal,
         variationSettings = FontVariation.Settings(
@@ -241,7 +265,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
 
     val customWelcomeFontFamily = FontFamily(
         Font(
-            resId = com.music.vivi.R.font.plus_jakarta_sans,
+            resId = com.music.vivi.R.font.sans_flex,
             variationSettings = FontVariation.Settings(
                 FontVariation.slant(-9f),
                 FontVariation.width(111f),
@@ -373,7 +397,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                         },
                         leadingIcon = {
                             Icon(
-                                painter = painterResource(id = R.drawable.info),
+                                painter = rememberVectorPainter(image = Icons.Rounded.Info),
                                 contentDescription = null,
                                 modifier = Modifier.size(AssistChipDefaults.IconSize)
                             )
@@ -399,7 +423,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                         },
                         leadingIcon = {
                             Icon(
-                                painter = painterResource(id = R.drawable.person),
+                                painter = rememberVectorPainter(image = Icons.Rounded.Person),
                                 contentDescription = null,
                                 modifier = Modifier.size(AssistChipDefaults.IconSize)
                             )
@@ -457,7 +481,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             .verticalScroll(rememberScrollState())
                     ) {
                         PermissionCard(
-                            icon = painterResource(id = R.drawable.notification),
+                            icon = rememberVectorPainter(Icons.Rounded.Notifications),
                             iconColor = Color(0xFFffaee4),
                             iconTint = Color(0xFF8d0053),
                             title = stringResource(com.music.vivi.R.string.perm_notif_title),
@@ -484,7 +508,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                                     },
                                     thumbContent = {
                                         Icon(
-                                            painter = painterResource(if (hasNotificationPermission) R.drawable.check else R.drawable.close),
+                                            imageVector = if (hasNotificationPermission) Icons.Rounded.Check else Icons.Rounded.Close,
                                             contentDescription = null,
                                             modifier = Modifier.size(16.dp)
                                         )
@@ -513,7 +537,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
 
                             PermissionCard(
-                                icon = painterResource(id = R.drawable.update),
+                                icon = rememberVectorPainter(Icons.Rounded.SystemUpdate),
                                 iconColor = Color(0xFFffb683),
                                 iconTint = Color(0xFF753403),
                                 title = stringResource(com.music.vivi.R.string.perm_install_title),
@@ -521,7 +545,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                                 shape = bottomCardShape,
                                 control = {
                                     Icon(
-                                        painter = painterResource(if (canInstallPackages) R.drawable.check else R.drawable.navigate_next),
+                                        imageVector = if (canInstallPackages) Icons.Rounded.Check else Icons.Rounded.ChevronRight,
                                         contentDescription = null,
                                         tint = if (canInstallPackages) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -583,7 +607,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             .verticalScroll(rememberScrollState())
                     ) {
                         PermissionCard(
-                            icon = painterResource(id = R.drawable.star),
+                            icon = rememberVectorPainter(Icons.Rounded.Star),
                             iconColor = Color(0xFFfff1a8),
                             iconTint = Color(0xFF8d6e00),
                             title = "Star on GitHub",
@@ -591,7 +615,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             shape = topCardShape,
                             control = {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.navigate_next),
+                                    imageVector = Icons.Rounded.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -612,7 +636,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             shape = middleCardShape,
                             control = {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.navigate_next),
+                                    imageVector = Icons.Rounded.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -633,7 +657,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             shape = middleCardShape,
                             control = {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.navigate_next),
+                                    imageVector = Icons.Rounded.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -654,7 +678,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             shape = bottomCardShape,
                             control = {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.navigate_next),
+                                    imageVector = Icons.Rounded.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -723,7 +747,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                                 .verticalScroll(scrollState)
                         ) {
                             FeatureCard(
-                                icon = painterResource(id = R.drawable.lyrics),
+                                icon = rememberVectorPainter(Icons.Rounded.Lyrics),
                                 iconColor = Color(0xFFffaee4),
                                 iconTint = Color(0xFF8d0053),
                                 title = stringResource(com.music.vivi.R.string.feat_lyrics_title),
@@ -734,7 +758,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
 
                             FeatureCard(
-                                icon = painterResource(id = R.drawable.download),
+                                icon = rememberVectorPainter(Icons.Rounded.CloudDownload),
                                 iconColor = Color(0xFF80da88),
                                 iconTint = Color(0xFF00522c),
                                 shape = middleCardShape,
@@ -745,7 +769,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
 
                             FeatureCard(
-                                icon = painterResource(id = R.drawable.high_quality),
+                                icon = rememberVectorPainter(Icons.Rounded.HighQuality),
                                 iconColor = Color(0xFFffb683),
                                 iconTint = Color(0xFF753403),
                                 title = stringResource(com.music.vivi.R.string.feat_quality_title),
@@ -757,7 +781,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                                 Spacer(modifier = Modifier.height(2.dp))
 
                                 FeatureCard(
-                                    icon = painterResource(id = R.drawable.update),
+                                    icon = rememberVectorPainter(Icons.Rounded.SystemUpdate),
                                     iconColor = Color(0xFF67d4ff),
                                     iconTint = Color(0xFF004e5d),
                                     title = stringResource(com.music.vivi.R.string.feat_update_title),
@@ -769,7 +793,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
 
                             FeatureCard(
-                                icon = painterResource(id = R.drawable.gavel),
+                                icon = rememberVectorPainter(Icons.Rounded.Gavel),
                                 iconColor = Color(0xFFb6c6ed),
                                 iconTint = Color(0xFF001b3f),
                                 title = stringResource(com.music.vivi.R.string.feat_license_title),
@@ -780,7 +804,7 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
 
                             FeatureCard(
-                                icon = painterResource(id = R.drawable.terminal),
+                                icon = rememberVectorPainter(Icons.Rounded.Terminal),
                                 iconColor = Color(0xFFcabeff),
                                 iconTint = Color(0xFF1c0062),
                                 title = stringResource(com.music.vivi.R.string.feat_github_title),
@@ -1332,7 +1356,7 @@ fun WelcomeExpressiveButton(
         ) { arrowOnly ->
             if (arrowOnly) {
                 Icon(
-                    painter = painterResource(id = R.drawable.arrow_forward),
+                    imageVector = Icons.Rounded.ArrowForward,
                     contentDescription = text,
                     modifier = Modifier.size(32.dp)
                 )

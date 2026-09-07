@@ -145,6 +145,7 @@ import com.music.vivi.ui.utils.resize
 import com.music.vivi.utils.listItemShape
 import com.music.vivi.utils.makeTimeString
 import com.music.vivi.utils.rememberPreference
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.produceState
 import android.content.IntentFilter
 import android.content.BroadcastReceiver
@@ -576,7 +577,7 @@ fun Queue(
                             modifier = Modifier
                                 .height(56.dp)
                                 .weight(1f),
-                            colors = ToggleButtonDefaults.colors(
+                            colors = ToggleButtonDefaults.toggleButtonColors(
                                 containerColor = TextBackgroundColor.copy(alpha = 0.2f),
                                 contentColor = TextBackgroundColor,
                                 checkedContainerColor = TextBackgroundColor.copy(alpha = 0.4f),
@@ -607,7 +608,7 @@ fun Queue(
                             modifier = Modifier
                                 .height(56.dp)
                                 .weight(1f),
-                            colors = ToggleButtonDefaults.colors(
+                            colors = ToggleButtonDefaults.toggleButtonColors(
                                 containerColor = TextBackgroundColor.copy(alpha = 0.2f),
                                 contentColor = TextBackgroundColor,
                                 checkedContainerColor = TextBackgroundColor.copy(alpha = 0.4f),
@@ -951,7 +952,7 @@ fun Queue(
                         },
                         enabled = !isListenTogetherGuest,
                         shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                        colors = ToggleButtonDefaults.colors(
+                        colors = ToggleButtonDefaults.toggleButtonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -982,7 +983,7 @@ fun Queue(
                         },
                         enabled = !isListenTogetherGuest,
                         shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-                        colors = ToggleButtonDefaults.colors(
+                        colors = ToggleButtonDefaults.toggleButtonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -1020,7 +1021,7 @@ fun Queue(
                         },
                         enabled = !isListenTogetherGuest,
                         shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                        colors = ToggleButtonDefaults.colors(
+                        colors = ToggleButtonDefaults.toggleButtonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,

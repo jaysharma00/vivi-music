@@ -30,7 +30,6 @@ import android.content.Context
 import com.music.innertube.models.filterExplicit
 import com.music.vivi.constants.HideExplicitKey
 import com.music.vivi.db.MusicDatabase
-import com.music.vivi.utils.NetworkConnectivityObserver
 import com.music.vivi.utils.dataStore
 import com.music.vivi.utils.get
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,7 +40,6 @@ import com.music.vivi.constants.SuggestionRegionKey
 class SuggestionsViewModel @Inject constructor(
     @ApplicationContext val context: Context,
     val database: MusicDatabase,
-    val networkConnectivityObserver: NetworkConnectivityObserver,
 ) : ViewModel() {
     private var currentLoadedRegion: String? = null
     
@@ -70,27 +68,6 @@ class SuggestionsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val regionCode = context.dataStore.get(SuggestionRegionKey, "system")
             refresh(countryCode = regionCode, force = false)
-        }
-
-        // Auto-retry load when network connectivity is restored
-        viewModelScope.launch(Dispatchers.IO) {
-            var wasOffline = false
-            networkConnectivityObserver.networkStatus.collect { isConnected ->
-                if (isConnected) {
-                    val hasData = _suggestionTracks.value != null ||
-                            _suggestionAlbums.value != null ||
-                            _suggestionVideos.value != null ||
-                            _youtubeNewReleases.value != null
-
-                    if (wasOffline || !hasData) {
-                        val regionCode = context.dataStore.get(SuggestionRegionKey, "system")
-                        refresh(countryCode = regionCode, force = true)
-                    }
-                    wasOffline = false
-                } else {
-                    wasOffline = true
-                }
-            }
         }
     }
 
@@ -193,19 +170,9 @@ class SuggestionsViewModel @Inject constructor(
                     }
                 }
 
-                val hasData = _suggestionTracks.value != null ||
-                        _suggestionAlbums.value != null ||
-                        _suggestionVideos.value != null ||
-                        _youtubeNewReleases.value != null
-
-                if (hasData) {
-                    currentLoadedRegion = resolvedCode
-                } else {
-                    currentLoadedRegion = null
-                }
+                currentLoadedRegion = resolvedCode
             } catch (e: Exception) {
                 Log.e("SuggestionsViewModel", "Failed to fetch suggestions", e)
-                currentLoadedRegion = null
             } finally {
                 _isLoading.value = false
                 _isManualLoading.value = false

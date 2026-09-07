@@ -134,6 +134,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import com.music.vivi.vivimusic.isBluetoothHeadphoneConnected
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.drawBehind
@@ -414,7 +417,7 @@ private fun NewMiniPlayer(
                         .clickable { showAudioDeviceBottomSheet = true }
                 ) {
                     Icon(
-                        painter = painterResource(if (isBluetoothConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple),
+                        imageVector = if (isBluetoothConnected) Icons.Default.Headphones else Icons.Default.Speaker,
                         contentDescription = stringResource(R.string.audio_devices),
                         tint = primaryColor,
                         modifier = Modifier.size(20.dp)

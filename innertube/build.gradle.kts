@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.music.innertube"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -29,7 +29,6 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.encoding)
     implementation(libs.brotli)
-    implementation(libs.innertubex)
     implementation(libs.newpipeextractor)
     testImplementation(libs.junit)
 

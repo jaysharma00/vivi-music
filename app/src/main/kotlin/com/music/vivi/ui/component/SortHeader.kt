@@ -9,6 +9,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -101,7 +103,7 @@ inline fun <reified T : Enum<T>> SortHeader(
                             label = "Trailing Icon Rotation",
                         )
                         Icon(
-                            painter = painterResource(R.drawable.keyboard_arrow_down),
+                            imageVector = Icons.Filled.KeyboardArrowDown,
                             modifier = Modifier
                                 .size(SplitButtonDefaults.TrailingIconSize)
                                 .graphicsLayer {
@@ -129,7 +131,7 @@ inline fun <reified T : Enum<T>> SortHeader(
                         label = "Trailing Icon Rotation",
                     )
                     Icon(
-                        painter = painterResource(R.drawable.keyboard_arrow_down),
+                        imageVector = Icons.Filled.KeyboardArrowDown,
                         modifier = Modifier
                             .size(SplitButtonDefaults.TrailingIconSize)
                             .graphicsLayer {
