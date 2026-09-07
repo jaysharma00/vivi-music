@@ -120,6 +120,7 @@ import com.music.vivi.constants.ThumbnailCornerRadius
 import com.music.vivi.constants.UseAppleMiniPlayerKey
 import com.music.vivi.constants.UseNewMiniPlayerDesignKey
 import com.music.vivi.db.entities.ArtistEntity
+import com.music.vivi.LocalViviConnectManager
 import com.music.vivi.listentogether.ListenTogetherManager
 import com.music.vivi.models.MediaMetadata
 import com.music.vivi.playback.CastConnectionHandler
@@ -229,6 +230,9 @@ private fun NewMiniPlayer(
         }
     }
     val isCasting by castHandler?.isCasting?.collectAsState() ?: remember { mutableStateOf(false) }
+
+    val connectManager = LocalViviConnectManager.current
+    val connectedConnectDevice by connectManager?.connectedDevice?.collectAsState() ?: remember { mutableStateOf(null) }
 
     // Audio Output State
     val context = LocalContext.current
@@ -404,6 +408,19 @@ private fun NewMiniPlayer(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
+                // Vivi Connect indicator
+                if (connectedConnectDevice != null) {
+                    Icon(
+                        painter = painterResource(R.drawable.home_speaker_devices),
+                        contentDescription = "Vivi Connect",
+                        tint = primaryColor,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { showAudioDeviceBottomSheet = true }
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+
                 // Audio Device Button (Replacing SubscribeButton)
                 Box(
                     contentAlignment = Alignment.Center,
@@ -459,7 +476,11 @@ private fun NewMiniPlayerPlayButton(
 ) {
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
-    val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
+    val connectManager = LocalViviConnectManager.current
+    val isControllingRemote by connectManager?.isControllingRemote?.collectAsState() ?: remember { mutableStateOf(false) }
+    val remotePlaybackState by connectManager?.remotePlaybackState?.collectAsState() ?: remember { mutableStateOf(null) }
+    val connectIsPlaying = remotePlaybackState?.isPlaying ?: false
+    val effectiveIsPlaying = if (isControllingRemote) connectIsPlaying else if (isCasting) castIsPlaying else isPlaying
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val isMuted by playerConnection.isMuted.collectAsState()
 
@@ -515,7 +536,9 @@ private fun NewMiniPlayerPlayButton(
                         playerConnection.toggleMute()
                         return@clickable
                     }
-                    if (isCasting) {
+                    if (isControllingRemote) {
+                        connectManager?.remoteTogglePlayPause()
+                    } else if (isCasting) {
                         if (castIsPlaying) castHandler?.pause() else castHandler?.play()
                     } else if (playbackState == Player.STATE_ENDED) {
                         playerConnection.player.seekTo(0, 0)
@@ -813,7 +836,11 @@ private fun LegacyPlayPauseButton(
 ) {
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
-    val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
+    val connectManager = LocalViviConnectManager.current
+    val isControllingRemote by connectManager?.isControllingRemote?.collectAsState() ?: remember { mutableStateOf(false) }
+    val remotePlaybackState by connectManager?.remotePlaybackState?.collectAsState() ?: remember { mutableStateOf(null) }
+    val connectIsPlaying = remotePlaybackState?.isPlaying ?: false
+    val effectiveIsPlaying = if (isControllingRemote) connectIsPlaying else if (isCasting) castIsPlaying else isPlaying
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val isMuted by playerConnection.isMuted.collectAsState()
 
@@ -824,7 +851,9 @@ private fun LegacyPlayPauseButton(
                 playerConnection.toggleMute()
                 return@IconButton
             }
-            if (isCasting) {
+            if (isControllingRemote) {
+                connectManager?.remoteTogglePlayPause()
+            } else if (isCasting) {
                 if (castIsPlaying) castHandler?.pause() else castHandler?.play()
             } else if (playbackState == Player.STATE_ENDED) {
                 playerConnection.player.seekTo(0, 0)

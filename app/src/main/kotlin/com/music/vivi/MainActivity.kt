@@ -258,6 +258,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var listenTogetherManager: com.music.vivi.listentogether.ListenTogetherManager
 
+    @Inject
+    lateinit var viviConnectManager: com.music.vivi.connect.ViviConnectManager
+
     private val gitHubViewModel: GitHubViewModel by viewModels()
 
     private lateinit var navController: NavHostController
@@ -273,6 +276,7 @@ class MainActivity : ComponentActivity() {
                     Timber.tag("MainActivity").d("PlayerConnection created successfully")
                     // Connect Listen Together manager to player
                     listenTogetherManager.setPlayerConnection(playerConnection)
+                    viviConnectManager.setPlayerConnection(playerConnection)
                 } catch (e: Exception) {
                     Timber.tag("MainActivity").e(e, "Failed to create PlayerConnection")
                     // Retry after a delay of 500ms
@@ -281,6 +285,7 @@ class MainActivity : ComponentActivity() {
                         try {
                             playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                             listenTogetherManager.setPlayerConnection(playerConnection)
+                            viviConnectManager.setPlayerConnection(playerConnection)
                         } catch (e2: Exception) {
                             Timber.tag("MainActivity").e(e2, "Failed to create PlayerConnection on retry")
                         }
@@ -292,6 +297,7 @@ class MainActivity : ComponentActivity() {
         override fun onServiceDisconnected(name: ComponentName?) {
             // Disconnect Listen Together manager
             listenTogetherManager.setPlayerConnection(null)
+            viviConnectManager.setPlayerConnection(null)
             playerConnection?.dispose()
             playerConnection = null
         }
@@ -995,6 +1001,7 @@ class MainActivity : ComponentActivity() {
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,
                     LocalListenTogetherManager provides listenTogetherManager,
+                    LocalViviConnectManager provides viviConnectManager,
                     LocalSnackbarHostState provides snackbarHostState,
                 ) {
                     Scaffold(
@@ -1568,4 +1575,5 @@ val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No 
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 val LocalListenTogetherManager = staticCompositionLocalOf<com.music.vivi.listentogether.ListenTogetherManager?> { null }
+val LocalViviConnectManager = staticCompositionLocalOf<com.music.vivi.connect.ViviConnectManager?> { null }
 val LocalIsPlayerExpanded = compositionLocalOf { false }

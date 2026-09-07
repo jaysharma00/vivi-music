@@ -110,4 +110,10 @@ object AppModule {
         @ApplicationContext context: Context,
         client: ListenTogetherClient,
     ): ListenTogetherManager = ListenTogetherManager(client, context)
+
+    @Singleton
+    @Provides
+    fun provideViviConnectManager(
+        @ApplicationContext context: Context,
+    ): com.music.vivi.connect.ViviConnectManager = com.music.vivi.connect.ViviConnectManager(context)
 }

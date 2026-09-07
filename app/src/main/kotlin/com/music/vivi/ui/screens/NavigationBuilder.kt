@@ -428,6 +428,10 @@ fun NavGraphBuilder.navigationBuilder(
         ListenTogetherSettings(navController, scrollBehavior)
     }
 
+    composable("settings/connect") {
+        com.music.vivi.ui.screens.settings.integrations.ViviConnectSettings(navController, scrollBehavior)
+    }
+
     composable("settings/discord/login") {
         DiscordLoginScreen(navController)
     }

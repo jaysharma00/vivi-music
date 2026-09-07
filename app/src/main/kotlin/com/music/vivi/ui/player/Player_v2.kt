@@ -72,6 +72,7 @@ import com.music.vivi.ui.component.CastButton
 import com.music.vivi.BuildConfig
 import com.music.vivi.R
 import com.music.vivi.utils.rememberPreference
+import com.music.vivi.LocalViviConnectManager
 import kotlinx.coroutines.launch
 
 enum class PlayerInternalState { COVER, LYRICS, QUEUE }
@@ -127,8 +128,12 @@ fun PlayerV2(
     val castDuration by castHandler?.castDuration?.collectAsState() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
     val castIsBuffering by castHandler?.castIsBuffering?.collectAsState() ?: remember { mutableStateOf(false) }
-    val castVolume by castHandler?.castVolume?.collectAsState() ?: remember { mutableFloatStateOf(1f) }
-    val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
+    val connectManager = LocalViviConnectManager.current
+    val isControllingRemote by connectManager?.isControllingRemote?.collectAsState() ?: remember { mutableStateOf(false) }
+    val remotePlaybackState by connectManager?.remotePlaybackState?.collectAsState() ?: remember { mutableStateOf(null) }
+    val connectedConnectDevice by connectManager?.connectedDevice?.collectAsState() ?: remember { mutableStateOf(null) }
+    val connectIsPlaying = remotePlaybackState?.isPlaying ?: false
+    val effectiveIsPlaying = if (isControllingRemote) connectIsPlaying else if (isCasting) castIsPlaying else isPlaying
     var lastManualSeekTime by remember { mutableLongStateOf(0L) }
     
     androidx.activity.compose.BackHandler(enabled = playerState != PlayerInternalState.COVER) {
@@ -768,7 +773,9 @@ fun PlayerV2(
                         onValueChangeFinished = {
                             if (!isListenTogetherGuest) {
                                 sliderPosition?.let { pos ->
-                                    if (isCasting) {
+                                    if (isControllingRemote) {
+                                        connectManager?.remoteSeekTo(pos)
+                                    } else if (isCasting) {
                                         castHandler?.seekTo(pos)
                                         lastManualSeekTime = System.currentTimeMillis()
                                     } else {
@@ -816,7 +823,8 @@ fun PlayerV2(
                         IconButton(
                             onClick = {
                                 if (!isListenTogetherGuest) {
-                                    if (isCasting) castHandler?.skipToPrevious()
+                                    if (isControllingRemote) connectManager?.remoteSeekToPrevious()
+                                    else if (isCasting) castHandler?.skipToPrevious()
                                     else if (canSkipPrevious) playerConnection.player.seekToPrevious()
                                 }
                             },
@@ -832,6 +840,8 @@ fun PlayerV2(
                             onClick = {
                                 if (isListenTogetherGuest) {
                                     playerConnection.toggleMute()
+                                } else if (isControllingRemote) {
+                                    connectManager?.remoteTogglePlayPause()
                                 } else if (isCasting) {
                                     if (castIsPlaying) castHandler?.pause() else castHandler?.play()
                                 } else {
@@ -860,7 +870,8 @@ fun PlayerV2(
                         IconButton(
                             onClick = {
                                 if (!isListenTogetherGuest) {
-                                    if (isCasting) castHandler?.skipToNext()
+                                    if (isControllingRemote) connectManager?.remoteSeekToNext()
+                                    else if (isCasting) castHandler?.skipToNext()
                                     else if (canSkipNext) playerConnection.player.seekToNext()
                                 }
                             },
@@ -899,7 +910,9 @@ fun PlayerV2(
                                     else if (isVolActive) systemVolume
                                     else animatedVolume,
                             onValueChange = { newValue ->
-                                if (isCasting) {
+                                if (isControllingRemote) {
+                                    connectManager?.remoteSetVolume(newValue)
+                                } else if (isCasting) {
                                     castHandler?.setVolume(newValue)
                                 } else {
                                     systemVolume = newValue
@@ -980,6 +993,28 @@ fun PlayerV2(
                             text = bluetoothDeviceName!!,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = adaptiveSecondary.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier
+                                .absoluteOffset(y = 30.dp)
+                                .widthIn(max = 84.dp)
+                    } else if (connectedConnectDevice != null) {
+                        IconButton(
+                            onClick = { showAudioDeviceBottomSheet = true },
+                            modifier = Modifier.background(adaptivePrimary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.home_speaker_devices),
+                                contentDescription = "Speaker",
+                                tint = adaptivePrimary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Text(
+                            text = connectedConnectDevice!!.name,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = adaptivePrimary,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,

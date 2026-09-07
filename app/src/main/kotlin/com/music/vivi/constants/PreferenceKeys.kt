@@ -601,6 +601,10 @@ enum class SearchSource {
         }
 }
 
+val ViviConnectEnabledKey = booleanPreferencesKey("vivi_connect_enabled")
+val ViviConnectDeviceNameKey = stringPreferencesKey("vivi_connect_device_name")
+val ViviConnectSameAccountOnlyKey = booleanPreferencesKey("vivi_connect_same_account_only")
+
 val VisitorDataKey = stringPreferencesKey("visitorData")
 val DataSyncIdKey = stringPreferencesKey("dataSyncId")
 val InnerTubeCookieKey = stringPreferencesKey("innerTubeCookie")

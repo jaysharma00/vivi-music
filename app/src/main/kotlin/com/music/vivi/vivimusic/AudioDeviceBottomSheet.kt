@@ -2,6 +2,9 @@
 
 package com.music.vivi.vivimusic
 
+import com.music.vivi.LocalViviConnectManager
+import androidx.compose.runtime.collectAsState
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
@@ -596,6 +599,174 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                         shapes = when (index) { 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes(); options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes(); else -> ButtonGroupDefaults.connectedMiddleButtonShapes() },
                                         modifier = Modifier.weight(1f).height(48.dp).semantics { role = Role.RadioButton }
                                     ) { Text(text = label, style = MaterialTheme.typography.bodyMedium) }
+                                }
+                            }
+                        }
+                    }
+
+                    // Vivi Connect Section (Spotify Connect Style)
+                    val connectManager = LocalViviConnectManager.current
+                    val connectEnabled by connectManager?.isEnabled?.collectAsState() ?: remember { mutableStateOf(false) }
+                    val discoveredDevices by connectManager?.discoveredDevices?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+                    val connectedDevice by connectManager?.connectedDevice?.collectAsState() ?: remember { mutableStateOf(null) }
+
+                    if (connectEnabled) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.home_speaker_devices),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = "Vivi Connect",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    if (connectedDevice != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            modifier = Modifier.clickable {
+                                                connectManager?.transferPlaybackToThisDevice()
+                                                onDismiss()
+                                            }
+                                        ) {
+                                            Text(
+                                                text = "Play on this phone",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // This device row
+                                val myDeviceName = connectManager?.deviceName?.collectAsState()?.value ?: "This Device"
+                                val isControlling = connectedDevice != null
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(if (!isControlling) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+                                        .clickable(enabled = isControlling) {
+                                            connectManager?.transferPlaybackToThisDevice()
+                                            onDismiss()
+                                        }
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.phone_android),
+                                        contentDescription = null,
+                                        tint = if (!isControlling) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = myDeviceName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (!isControlling) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (!isControlling) "This device (Active)" else "Tap to transfer playback here",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (!isControlling) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (!isControlling) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary)
+                                        )
+                                    }
+                                }
+
+                                // Discovered network devices
+                                if (discoveredDevices.isNotEmpty()) {
+                                    Text(
+                                        text = "Devices on Wi-Fi",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+
+                                    for (dev in discoveredDevices) {
+                                        val isCurrentConnected = connectedDevice?.id == dev.id
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(if (isCurrentConnected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                            .clickable {
+                                                if (isCurrentConnected) {
+                                                    connectManager?.disconnectFromDevice()
+                                                } else {
+                                                    connectManager?.transferPlaybackToRemoteDevice(dev)
+                                                    onDismiss()
+                                                }
+                                            }
+                                            .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.home_speaker_devices),
+                                                contentDescription = null,
+                                                tint = if (isCurrentConnected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = dev.name,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (isCurrentConnected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = if (isCurrentConnected) "Connected • Tap to disconnect" else "Tap to transfer playback to this device",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (isCurrentConnected) MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            if (isCurrentConnected) {
+                                                Text(
+                                                    text = "Connected",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -167,6 +167,14 @@ fun SettingsScreen(
                 )
                 add(
                     Material3SettingsItem(
+                        icon = painterResource(R.drawable.home_speaker_devices),
+                        title = { Text("Vivi Connect") },
+                        description = { Text("Multi-device sync and control on the same network") },
+                        onClick = { navController.navigate("settings/connect") }
+                    )
+                )
+                add(
+                    Material3SettingsItem(
                         icon = painterResource(R.drawable.language),
                         title = { Text(stringResource(R.string.content)) },
                         description = { Text(stringResource(R.string.setting_content_desc)) },
