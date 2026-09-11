@@ -234,6 +234,16 @@ enum class CrossfadeCurve {
         }
 }
 
+val CrossfadeStereoModeKey = stringPreferencesKey("crossfadeStereoMode")
+
+enum class CrossfadeStereoMode {
+    OFF,
+    RIGHT_TO_LEFT,
+    LEFT_TO_RIGHT,
+    ALTERNATING
+}
+
+
 val MaxImageCacheSizeKey = intPreferencesKey("maxImageCacheSize")
 val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
 

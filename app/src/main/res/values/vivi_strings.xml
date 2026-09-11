@@ -355,6 +355,12 @@
     <string name="crossfade_curve_entry_smoothstep">Smoothstep</string>
     <string name="crossfade_curve_preview_outgoing">Outgoing</string>
     <string name="crossfade_curve_preview_incoming">Incoming</string>
+    <string name="crossfade_stereo_mode">Stereo pan transition</string>
+    <string name="crossfade_stereo_mode_desc">Pan the outgoing track to one side while the incoming track emerges from the other</string>
+    <string name="crossfade_stereo_mode_off">Off</string>
+    <string name="crossfade_stereo_mode_right_to_left">Right to Left</string>
+    <string name="crossfade_stereo_mode_left_to_right">Left to Right</string>
+    <string name="crossfade_stereo_mode_alternating">Alternating</string>
     <string name="crossfade_beta_title">Beta Feature</string>
     <string name="crossfade_beta_message">Crossfade is a new feature and may have bugs. If you experience any issues, please report them.\n\nThis feature disables audio offload due to technical limitations.</string>
     <string name="music_haptics">Music Haptics</string>

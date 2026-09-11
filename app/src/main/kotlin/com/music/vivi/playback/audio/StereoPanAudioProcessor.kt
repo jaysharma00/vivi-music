@@ -81,8 +81,10 @@ class StereoPanAudioProcessor : AudioProcessor {
             val leftSample = inputBuffer.getShort(frameOffset)
             val rightSample = inputBuffer.getShort(frameOffset + 2)
 
-            out.putShort((leftSample * leftGain).toInt().toShort())
-            out.putShort((rightSample * rightGain).toInt().toShort())
+            val leftOut = (leftSample * leftGain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            val rightOut = (rightSample * rightGain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            out.putShort(leftOut.toShort())
+            out.putShort(rightOut.toShort())
         }
         // Mark the whole input as consumed, matching the AudioProcessor contract,
         // even if a few trailing bytes didn't form a full frame.

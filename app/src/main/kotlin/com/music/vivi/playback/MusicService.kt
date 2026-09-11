@@ -92,6 +92,9 @@ import com.music.vivi.constants.CrossfadeDurationKey
 import com.music.vivi.constants.CrossfadeEnabledKey
 import com.music.vivi.constants.CrossfadeGaplessKey
 import com.music.vivi.constants.CrossfadeManualSkipKey
+import com.music.vivi.constants.CrossfadeStereoMode
+import com.music.vivi.constants.CrossfadeStereoModeKey
+import com.music.vivi.playback.audio.StereoPanAudioProcessor
 import com.music.vivi.constants.DisableLoadMoreWhenRepeatAllKey
 import android.os.Handler
 import android.os.Looper
@@ -279,6 +282,8 @@ class MusicService :
     private var crossfadeGapless = true
     private var crossfadeManualSkipEnabled = false
     private var crossfadeCurve = CrossfadeCurve.EASE_OUT_QUAD
+    private var crossfadeStereoMode = CrossfadeStereoMode.RIGHT_TO_LEFT
+    private var lastPanDirectionRightToLeft = false
     private var crossfadeTriggerJob: Job? = null
 
     /** Holds the combined crossfade-related settings emitted from DataStore. */
@@ -288,6 +293,7 @@ class MusicService :
         val gapless: Boolean,
         val manualSkip: Boolean,
         val curve: CrossfadeCurve,
+        val stereoMode: CrossfadeStereoMode,
     )
 
     /**
@@ -304,6 +310,10 @@ class MusicService :
     private val secondaryPlayerListener = object : Player.Listener {
         override fun onPlayerError(error: PlaybackException) {
             Timber.tag(TAG).e(error, "Secondary player error")
+            secondaryPlayer?.let { sp ->
+                playerPanProcessors.remove(sp)
+                playerSilenceProcessors.remove(sp)
+            }
             secondaryPlayer?.stop()
             secondaryPlayer?.clearMediaItems()
             secondaryPlayer = null
@@ -398,6 +408,7 @@ class MusicService :
     val playerFlow = _playerFlow.asStateFlow()
 
     private val playerSilenceProcessors = HashMap<Player, SilenceDetectorAudioProcessor>()
+    private val playerPanProcessors = HashMap<Player, StereoPanAudioProcessor>()
 
 
     private val instantSilenceSkipEnabled = MutableStateFlow(false)
@@ -983,6 +994,7 @@ class MusicService :
                     gapless = prefs[CrossfadeGaplessKey] ?: true,
                     manualSkip = prefs[CrossfadeManualSkipKey] ?: false,
                     curve = prefs[CrossfadeCurveKey].toEnum(CrossfadeCurve.EASE_OUT_QUAD),
+                    stereoMode = prefs[CrossfadeStereoModeKey].toEnum(CrossfadeStereoMode.RIGHT_TO_LEFT),
                 )
             },
             listenTogetherManager.roomState
@@ -997,6 +1009,7 @@ class MusicService :
                 crossfadeGapless = settings.gapless
                 crossfadeManualSkipEnabled = settings.manualSkip
                 crossfadeCurve = settings.curve
+                crossfadeStereoMode = settings.stereoMode
             }
 
         if (dataStore.get(PersistentQueueKey, true)) {
@@ -1112,6 +1125,7 @@ class MusicService :
         equalizerService.addAudioProcessor(eqProcessor)
 
         val silenceProcessor = SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
+        val panProcessor = StereoPanAudioProcessor()
 
         // Set initial state
         runBlocking {
@@ -1122,7 +1136,7 @@ class MusicService :
 
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor))
+            .setRenderersFactory(createRenderersFactory(eqProcessor, silenceProcessor, panProcessor))
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setAudioAttributes(
@@ -1138,6 +1152,7 @@ class MusicService :
             .build()
 
         playerSilenceProcessors[player] = silenceProcessor
+        playerPanProcessors[player] = panProcessor
 
         player.apply {
                 runBlocking {
@@ -3348,7 +3363,8 @@ class MusicService :
 
     private fun createRenderersFactory(
         eqProcessor: CustomEqualizerAudioProcessor,
-        silenceProcessor: SilenceDetectorAudioProcessor
+        silenceProcessor: SilenceDetectorAudioProcessor,
+        panProcessor: StereoPanAudioProcessor,
     ) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
@@ -3365,6 +3381,7 @@ class MusicService :
                         arrayOf(
                             eqProcessor,
                             silenceProcessor,
+                            panProcessor,
                         ),
                         SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                         SonicAudioProcessor(),
@@ -3511,6 +3528,15 @@ class MusicService :
         player.removeListener(this)
         player.removeListener(sleepTimer)
         playerSilenceProcessors.remove(player)
+        playerPanProcessors.remove(player)
+        secondaryPlayer?.let {
+            playerSilenceProcessors.remove(it)
+            playerPanProcessors.remove(it)
+        }
+        fadingPlayer?.let {
+            playerSilenceProcessors.remove(it)
+            playerPanProcessors.remove(it)
+        }
         // Note: equalizerService audio processors are cleared in equalizerService.release() if needed,
         // or we can't easily reference the specific processor created in createExoPlayer here without storing it.
         // But since we are destroying the service, it's fine.
@@ -4067,41 +4093,89 @@ class MusicService :
 
         crossfadeJob = scope.launch {
             val duration = crossfadeDuration.toLong()
-            val steps = 20
+            val steps = (duration / 50L).coerceIn(20L, 100L).toInt()
             val stepTime = duration / steps
             val startVolume = try { fadingPlayer?.volume ?: 1f } catch(e:Exception) { 1f }
 
-            for (i in 0..steps) {
-                if (!isActive) break
-                // Pause volume ramp if player is paused
-                while (!player.isPlaying && isActive) {
-                    delay(100)
+            val fadingPanProcessor = fadingPlayer?.let { playerPanProcessors[it] }
+            val incomingPanProcessor = playerPanProcessors[player]
+
+            val isRtoL = when (crossfadeStereoMode) {
+                CrossfadeStereoMode.RIGHT_TO_LEFT -> true
+                CrossfadeStereoMode.LEFT_TO_RIGHT -> false
+                CrossfadeStereoMode.ALTERNATING -> {
+                    val nextDirection = !lastPanDirectionRightToLeft
+                    lastPanDirectionRightToLeft = nextDirection
+                    nextDirection
                 }
+                CrossfadeStereoMode.OFF -> null
+            }
 
-                val progress = i / steps.toFloat()
-                val fadeIn = crossfadeCurve.fadeIn(progress)
-                val fadeOut = crossfadeCurve.fadeOut(progress)
-
-                try {
-                    player.volume = startVolume * fadeIn
-                    fadingPlayer?.volume = startVolume * fadeOut
-                } catch (e: Exception) { break }
-
-                delay(stepTime)
+            // Set initial stereo pan values
+            if (isRtoL == true) {
+                fadingPanProcessor?.pan = 0f
+                incomingPanProcessor?.pan = 1f
+            } else if (isRtoL == false) {
+                fadingPanProcessor?.pan = 0f
+                incomingPanProcessor?.pan = -1f
+            } else {
+                fadingPanProcessor?.pan = 0f
+                incomingPanProcessor?.pan = 0f
             }
 
             try {
-                fadingPlayer?.volume = 0f
-                player.volume = startVolume
-                cleanupCrossfade()
-            } catch (e: Exception) { }
+                for (i in 0..steps) {
+                    if (!isActive) break
+                    // Pause volume ramp if player is paused
+                    while (!player.isPlaying && isActive) {
+                        delay(100)
+                    }
+
+                    val progress = i / steps.toFloat()
+                    val fadeIn = crossfadeCurve.fadeIn(progress)
+                    val fadeOut = crossfadeCurve.fadeOut(progress)
+
+                    try {
+                        player.volume = startVolume * fadeIn
+                        fadingPlayer?.volume = startVolume * fadeOut
+
+                        if (isRtoL == true) {
+                            // Outgoing pans Center (0.0) -> Left (-1.0)
+                            fadingPanProcessor?.pan = -progress
+                            // Incoming pans Right (+1.0) -> Center (0.0)
+                            incomingPanProcessor?.pan = 1f - progress
+                        } else if (isRtoL == false) {
+                            // Outgoing pans Center (0.0) -> Right (+1.0)
+                            fadingPanProcessor?.pan = progress
+                            // Incoming pans Left (-1.0) -> Center (0.0)
+                            incomingPanProcessor?.pan = -(1f - progress)
+                        }
+                    } catch (e: Exception) { break }
+
+                    delay(stepTime)
+                }
+            } finally {
+                try {
+                    fadingPlayer?.volume = 0f
+                    player.volume = startVolume
+                    incomingPanProcessor?.pan = 0f
+                    fadingPanProcessor?.pan = 0f
+                    cleanupCrossfade()
+                } catch (e: Exception) { }
+            }
         }
     }
 
     private fun cleanupCrossfade() {
-        fadingPlayer?.stop()
-        fadingPlayer?.clearMediaItems()
-        fadingPlayer?.release()
+        fadingPlayer?.let { fp ->
+            playerPanProcessors[fp]?.pan = 0f
+            playerSilenceProcessors.remove(fp)
+            playerPanProcessors.remove(fp)
+            fp.stop()
+            fp.clearMediaItems()
+            fp.release()
+        }
+        playerPanProcessors[player]?.pan = 0f
         fadingPlayer = null
         isCrossfading = false
         sleepTimer.notifySongTransition()

@@ -58,6 +58,8 @@ import com.music.vivi.constants.SaavnAudioQualityKey
 import com.music.vivi.constants.AutoDownloadOnLikeKey
 import com.music.vivi.constants.CrossfadeCurve
 import com.music.vivi.constants.CrossfadeCurveKey
+import com.music.vivi.constants.CrossfadeStereoMode
+import com.music.vivi.constants.CrossfadeStereoModeKey
 import com.music.vivi.constants.CanvasThumbnailAnimationKey
 import com.music.vivi.constants.CanvasSourceKey
 import com.music.vivi.constants.CanvasSource
@@ -121,6 +123,10 @@ fun PlayerSettings(
     val (crossfadeCurve, onCrossfadeCurveChange) = rememberEnumPreference(
         CrossfadeCurveKey,
         defaultValue = CrossfadeCurve.EASE_OUT_QUAD
+    )
+    val (crossfadeStereoMode, onCrossfadeStereoModeChange) = rememberEnumPreference(
+        CrossfadeStereoModeKey,
+        defaultValue = CrossfadeStereoMode.RIGHT_TO_LEFT
     )
     val (musicHapticsEnabled, onMusicHapticsEnabledChange) = rememberPreference(
         MusicHapticsEnabledKey,
@@ -388,6 +394,29 @@ fun PlayerSettings(
             )
         }
 
+        var showCrossfadeStereoModeDialog by remember { mutableStateOf(false) }
+
+        if (showCrossfadeStereoModeDialog) {
+            EnumDialog(
+                onDismiss = { showCrossfadeStereoModeDialog = false },
+                onSelect = {
+                    onCrossfadeStereoModeChange(it)
+                    showCrossfadeStereoModeDialog = false
+                },
+                title = stringResource(R.string.crossfade_stereo_mode),
+                current = crossfadeStereoMode,
+                values = CrossfadeStereoMode.entries,
+                valueText = {
+                    when (it) {
+                        CrossfadeStereoMode.OFF -> stringResource(R.string.crossfade_stereo_mode_off)
+                        CrossfadeStereoMode.RIGHT_TO_LEFT -> stringResource(R.string.crossfade_stereo_mode_right_to_left)
+                        CrossfadeStereoMode.LEFT_TO_RIGHT -> stringResource(R.string.crossfade_stereo_mode_left_to_right)
+                        CrossfadeStereoMode.ALTERNATING -> stringResource(R.string.crossfade_stereo_mode_alternating)
+                    }
+                }
+            )
+        }
+
         if (showCrossfadeBetaDialog) {
             ActionPromptDialog(
                 onDismiss = { showCrossfadeBetaDialog = false },
@@ -548,6 +577,21 @@ fun PlayerSettings(
                             }
                         },
                         onClick = { showCrossfadeCurveDialog = true }
+                    ))
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.spatial_tracking_apple),
+                        title = { Text(stringResource(R.string.crossfade_stereo_mode)) },
+                        description = {
+                            Text(
+                                when (crossfadeStereoMode) {
+                                    CrossfadeStereoMode.OFF -> stringResource(R.string.crossfade_stereo_mode_off)
+                                    CrossfadeStereoMode.RIGHT_TO_LEFT -> stringResource(R.string.crossfade_stereo_mode_right_to_left)
+                                    CrossfadeStereoMode.LEFT_TO_RIGHT -> stringResource(R.string.crossfade_stereo_mode_left_to_right)
+                                    CrossfadeStereoMode.ALTERNATING -> stringResource(R.string.crossfade_stereo_mode_alternating)
+                                }
+                            )
+                        },
+                        onClick = { showCrossfadeStereoModeDialog = true }
                     ))
                     add(Material3SettingsItem(
                         icon = painterResource(R.drawable.album),
