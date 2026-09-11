@@ -118,6 +118,10 @@ fun PlayerSettings(
         CrossfadeDurationKey,
         defaultValue = 5f
     )
+    val (crossfadeCurve, onCrossfadeCurveChange) = rememberEnumPreference(
+        CrossfadeCurveKey,
+        defaultValue = CrossfadeCurve.EASE_OUT_QUAD
+    )
     val (musicHapticsEnabled, onMusicHapticsEnabledChange) = rememberPreference(
         MusicHapticsEnabledKey,
         defaultValue = false
