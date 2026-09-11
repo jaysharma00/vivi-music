@@ -237,6 +237,7 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import com.ermohdamaan.justforpixel.justforpixelexpressivelab.core.components.sliders.ExpressiveWavySlider
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -261,7 +262,10 @@ import com.music.vivi.canvas.TidalCanvasProvider
 import com.music.vivi.constants.CanvasSource
 import com.music.vivi.constants.CanvasSourceKey
 import com.music.vivi.constants.CanvasThumbnailAnimationKey
+import com.music.vivi.constants.CanvasLoadOnlyWifiKey
+import com.music.vivi.extensions.metadata
 import com.music.vivi.ui.player.CanvasArtworkPlaybackCache
+import com.music.vivi.utils.isWifiConnected
 import com.music.vivi.vivimusiccanvas.ViviMusicCanvasProvider
 import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -309,6 +313,14 @@ fun BottomSheetPlayer(
 
     val enableCanvas by rememberPreference(CanvasThumbnailAnimationKey, true)
     val (canvasSource) = rememberEnumPreference(CanvasSourceKey, defaultValue = CanvasSource.AUTO)
+    val canvasLoadOnlyWifi by rememberPreference(CanvasLoadOnlyWifiKey, defaultValue = false)
+
+    val shouldUseDarkButtonColors = remember(playerBackground, useDarkTheme) {
+        when (playerBackground) {
+            PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.GLOW_ANIMATED, PlayerBackgroundStyle.APPLE_MUSIC, PlayerBackgroundStyle.LIVE_MESH -> true
+            PlayerBackgroundStyle.DEFAULT -> useDarkTheme
+        }
+    }
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val swipeLyrics by rememberPreference(SwipeLyricsKey, false)
@@ -586,6 +598,10 @@ fun BottomSheetPlayer(
 
     LaunchedEffect(mediaMetadata?.id, albumTitle, playerBackground, canvasSource) {
         if (playerBackground != PlayerBackgroundStyle.APPLE_MUSIC || !enableCanvas) {
+            canvasArtwork = null
+            return@LaunchedEffect
+        }
+        if (canvasLoadOnlyWifi && !isWifiConnected(context)) {
             canvasArtwork = null
             return@LaunchedEffect
         }
@@ -2155,6 +2171,68 @@ fun BottomSheetPlayer(
                             modifier = Modifier.padding(horizontal = PlayerHorizontalPadding)
                         )
                     }
+                }
+
+                SliderStyle.EXPRESSIVE -> {
+                    ExpressiveWavySlider(
+                        value = { (sliderPosition ?: effectivePosition).toFloat() },
+                        onValueChange = {
+                            if (!isListenTogetherGuest) {
+                                sliderPosition = it.toLong()
+                            }
+                        },
+                        onValueChangeFinished = {
+                            if (!isListenTogetherGuest) {
+                                sliderPosition?.let {
+                                    if (isCasting) {
+                                        castHandler?.seekTo(it)
+                                        lastManualSeekTime = System.currentTimeMillis()
+                                    } else {
+                                        playerConnection.player.seekTo(it)
+                                    }
+                                    position = it
+                                }
+                                sliderPosition = null
+                            }
+                        },
+                        valueRange = 0f..(if (duration == C.TIME_UNSET) 0f else duration.toFloat()),
+                        enabled = !isListenTogetherGuest,
+                        isPlaying = effectiveIsPlaying,
+                        activeTrackColor = textButtonColor,
+                        thumbColor = textButtonColor,
+                        modifier = Modifier.padding(horizontal = PlayerHorizontalPadding)
+                    )
+                }
+
+                SliderStyle.EXPRESSIVE -> {
+                    ExpressiveWavySlider(
+                        value = { (sliderPosition ?: effectivePosition).toFloat() },
+                        onValueChange = {
+                            if (!isListenTogetherGuest) {
+                                sliderPosition = it.toLong()
+                            }
+                        },
+                        onValueChangeFinished = {
+                            if (!isListenTogetherGuest) {
+                                sliderPosition?.let {
+                                    if (isCasting) {
+                                        castHandler?.seekTo(it)
+                                        lastManualSeekTime = System.currentTimeMillis()
+                                    } else {
+                                        playerConnection.player.seekTo(it)
+                                    }
+                                    position = it
+                                }
+                                sliderPosition = null
+                            }
+                        },
+                        valueRange = 0f..(if (duration == C.TIME_UNSET) 0f else duration.toFloat()),
+                        enabled = !isListenTogetherGuest,
+                        isPlaying = effectiveIsPlaying,
+                        activeTrackColor = textButtonColor,
+                        thumbColor = textButtonColor,
+                        modifier = Modifier.padding(horizontal = PlayerHorizontalPadding)
+                    )
                 }
             }
 

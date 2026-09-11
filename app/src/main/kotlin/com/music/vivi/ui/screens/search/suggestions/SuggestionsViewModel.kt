@@ -35,6 +35,8 @@ import com.music.vivi.utils.dataStore
 import com.music.vivi.utils.get
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.music.vivi.constants.SuggestionRegionKey
 
 @HiltViewModel
@@ -68,8 +70,33 @@ class SuggestionsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val regionCode = context.dataStore.get(SuggestionRegionKey, "system")
-            refresh(countryCode = regionCode, force = false)
+            context.dataStore.data
+                .map { it[SuggestionRegionKey] ?: "system" }
+                .distinctUntilChanged()
+                .collect { regionCode ->
+                    refresh(countryCode = regionCode, force = false)
+                }
+        }
+
+        // Auto-retry load when network connectivity is restored
+        viewModelScope.launch(Dispatchers.IO) {
+            var wasOffline = false
+            networkConnectivityObserver.networkStatus.collect { isConnected ->
+                if (isConnected) {
+                    val hasData = _suggestionTracks.value != null ||
+                            _suggestionAlbums.value != null ||
+                            _suggestionVideos.value != null ||
+                            _youtubeNewReleases.value != null
+
+                    if (wasOffline || !hasData) {
+                        val regionCode = context.dataStore.data.first()[SuggestionRegionKey] ?: "system"
+                        refresh(countryCode = regionCode, force = true)
+                    }
+                    wasOffline = false
+                } else {
+                    wasOffline = true
+                }
+            }
         }
 
         // Auto-retry load when network connectivity is restored
@@ -105,10 +132,9 @@ class SuggestionsViewModel @Inject constructor(
         if (!force && currentLoadedRegion == resolvedCode) return
         
         // Abort if a load is currently happening
-        if (_isLoading.value) return
+        if (!_isLoading.compareAndSet(expect = false, update = true)) return
         
         viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
             if (force) _isManualLoading.value = true
             
             // Clear current data if we are switching regions or forcing a fresh load
